@@ -20,6 +20,7 @@ __version__ = ISAACLAB_TASKS_METADATA["package"]["version"]
 
 ##
 # Register Gym environments.
+from isaaclab_tasks.manager_based.manipulation.lift.config import franka
 ##
 
 from .utils import import_packages
