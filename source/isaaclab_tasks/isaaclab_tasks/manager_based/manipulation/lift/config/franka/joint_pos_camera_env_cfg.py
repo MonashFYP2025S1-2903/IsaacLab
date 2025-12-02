@@ -56,7 +56,7 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=13.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 5)
             ),
-            offset=CameraCfg.OffsetCfg(pos=(0, 0.0, 0), rot=(1, 0, 0, 0), convention="ros"),
+            offset=CameraCfg.OffsetCfg(pos=(0, 0.0, 0), rot=(1, 0, 0, 1), convention="ros"),
         )
         
         # External camera: front
@@ -77,11 +77,11 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
         # '3': {'class': 'object'}, '4': {'class': 'table'}}}}
         # torch.Size([4, 480, 640, 1])
         # '''
-        # semantic_segmentation_mapping = {
-        #     "class:object": (255, 36, 66, 255),
-        #     "class:table": (255, 237, 218, 255),
-        #     "class:robot": (61, 178, 255, 255),
-        # },
+        semantic_segmentation_mapping = {
+            "class:object": (255, 36, 66, 255),
+            "class:table": (0, 0, 0, 255),
+            "class:robot_franka_panda": (0, 0, 255, 255),
+        },
         )
 
         # External camera: side
