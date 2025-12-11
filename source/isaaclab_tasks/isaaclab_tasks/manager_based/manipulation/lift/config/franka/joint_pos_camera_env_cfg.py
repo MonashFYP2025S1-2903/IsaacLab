@@ -51,7 +51,7 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
             update_period=0.0,
             height=1080,
             width=1920,
-            data_types=["rgb", "depth"],
+            data_types=["rgb", "depth", "semantic_segmentation"],
             colorize_semantic_segmentation=True,
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=13.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 5)
@@ -65,7 +65,7 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
             update_period=0.0,
             height=1080,
             width=1920,
-            data_types=["rgb", "depth"],
+            data_types=["rgb", "depth", "semantic_segmentation"],
             colorize_semantic_segmentation=True,
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=13.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 5)
@@ -77,11 +77,11 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
         # '3': {'class': 'object'}, '4': {'class': 'table'}}}}
         # torch.Size([4, 480, 640, 1])
         # '''
-        # semantic_segmentation_mapping = {
-        #     "class:object": (255, 36, 66, 255),
-        #     "class:table": (255, 237, 218, 255),
-        #     "class:robot": (61, 178, 255, 255),
-        # },
+        semantic_segmentation_mapping = {
+            "class:object": (255, 36, 66, 255),
+            "class:table": (0, 0, 0, 255),
+            "class:robot_franka_panda": (0, 0, 255, 255),
+        },
         )
 
         # External camera: side
@@ -90,7 +90,7 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
             update_period=0.0,
             height=1080,
             width=1920,
-            data_types=["rgb", "depth"],
+            data_types=["rgb", "depth", "semantic_segmentation"],
             colorize_semantic_segmentation=True,
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=13.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 5)
@@ -104,7 +104,7 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
             update_period=0.0,
             height=1080,
             width=1920,
-            data_types=["rgb", "depth"],
+            data_types=["rgb", "depth", "semantic_segmentation"],
             colorize_semantic_segmentation=True,
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=13.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 5)
@@ -127,7 +127,7 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
                     max_angular_velocity=1000.0,
                     max_linear_velocity=1000.0,
                     max_depenetration_velocity=5.0,
-                    disable_gravity=True,
+                    disable_gravity=False,
                 ),
             ),
         )
