@@ -6,10 +6,11 @@
 """Script to play a checkpoint if an RL agent from RSL-RL."""
 """./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/play_oneil.py --task=Isaac-Lift-Cube-Franka-Camera-v0 --num_envs=2 --enable_cameras --load_run /home/sh-d61-cps-hri/hri-pl-frm-mvvd/isaaclab/logs/rsl_rl/franka_lift/2025-09-12_13-48-36 --checkpoint /home/sh-d61-cps-hri/hri-pl-frm-mvvd/isaaclab/logs/rsl_rl/franka_lift/2025-09-12_13-48-36/model_1050.pt
 """
+# 2025-09-12_13-32-01
 """Launch Isaac Sim Simulator first."""
 
 import argparse
-
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from isaaclab.app import AppLauncher
 
 # local imports
@@ -146,7 +147,7 @@ def main():
     #file locations
     # data_dir = "/media/sh-d61-cps-hri/franka_panda_portable_disk_2T/FYP2025S1_2903/oneil_test"
     # data_dir = "/media/sh-d61-cps-hri/franka_panda_portable_disk_2T/FYP2025S1_2903/mohammad_test"
-    data_dir = "/media/sh-d61-cps-hri/franka_panda_portable_disk_2T/FYP2025S1_2903/minimum_data"
+    data_dir = "/home/sh-d61-cps-hri/hri-pl-frm-mvvd/data/mounted_dataset/work/mount_data/pref_learn"
 
     #make checkpoint directory
     checkpoint_location = resume_path[resume_path.rfind('/') + 1:]
@@ -168,14 +169,10 @@ def main():
     sensor = env.unwrapped.scene["camera_ext1"] #front
     sensor1 = env.unwrapped.scene["camera_ext2"] #side
     sensor2 = env.unwrapped.scene["camera_bird"]
-    # sensor3 = env.unwrapped.scene["camera"]
+    sensor3 = env.unwrapped.scene["camera"]
     asset = env.unwrapped.scene["object"]
     robot = env.unwrapped.scene["robot"]
-    robots = env.unwrapped.scene.articulations['robot']          # get robot
-
-    rigid_objects = env.unwrapped.scene.rigid_objects['object']                 # get rigid objects
-
-    # File to write to
+    # # File to write to
     # csv_file = "data.csv"
     # counter = 0
 
@@ -188,15 +185,54 @@ def main():
     #                          "front_img_dp","side_img_dp","bird_img_dp","env_origin","front_sem","side_sem","bird_sem","front_sem_robot","side_sem_robot","bird_sem_robot",
     #                          "front_sem_object","side_sem_object","bird_sem_object"])  # header row
     frame_idx =0
-    total_traj = 1000  #total trajectories to collect
+    total_traj = 2  #total trajectories to collect
     num_envs = env_cfg.scene.num_envs
     pref_log = [{'actions': [], 'rewards': []} for _ in range(num_envs)]
     traj = np.zeros(num_envs, dtype=int)
     steps_per_traj = np.zeros(num_envs, dtype=int)
 
     env_ids = torch.arange(env_cfg.scene.num_envs)
+    save_data = [{} for _ in range(num_envs)]
+    for env_idx in range(env_cfg.scene.num_envs):
+            for type_cam in ['rgb','depth','semantic_all','semantic_robot','semantic_object']:
+                save_data[env_idx][type_cam] = {}
+                for cam in ['front','side','bird','hand']:
+                    save_data[env_idx][type_cam][cam] = {}
 
-    
+    for i in range(env_cfg.scene.num_envs):
+        if not os.path.exists(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}")):
+            #trajectory directory
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}"))
+            #data types
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","rgb"))
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","depth"))
+            #camera types
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","rgb","front"))
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","rgb","side"))
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","rgb","bird"))
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","rgb","hand"))
+
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","depth","front"))
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","depth","side"))
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","depth","bird"))
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","depth","hand"))
+
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_all","front"))
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_all","side"))
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_all","bird"))
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_all","hand"))
+
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","front"))
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","side"))
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","bird"))
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","hand"))
+
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","front"))
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","side"))
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","bird"))
+            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","hand"))
+
+    stage = omni.usd.get_context().get_stage()
     
     # simulate environment
     while simulation_app.is_running():
@@ -233,6 +269,37 @@ def main():
                     pref_log[i]['actions'].pop()  # remove last action corresponding to terminal state that has no observation
                     pref_log[i]['rewards'].pop() # remove last reward as with action
                     np.savez(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}",f"env{i}_traj{traj[i]:03d}.npz"), **pref_log[i])
+
+                    for j in range(env_cfg.scene.num_envs):
+                        with ThreadPoolExecutor(max_workers=8) as executor:
+                            futures = []
+                            for type_cam in ['rgb','depth','semantic_all','semantic_robot','semantic_object']:
+                                for cam in ['front','side','bird','hand']:
+                                    if cam == 'hand' and type_cam == 'semantic_object':
+                                            continue
+                                    for file_path in save_data[j][type_cam][cam]:
+                                        if type_cam == 'depth':
+                                            futures.append(executor.submit(
+                                                np.savez_compressed,
+                                                file_path,
+                                                save_data[j][type_cam][cam][file_path])
+                                            )
+                                        else:
+                                            futures.append(executor.submit(
+                                                save_images_to_file,
+                                                save_data[j][type_cam][cam][file_path],
+                                                file_path
+                                            ))
+                            # Wait for all threads to complete
+                            for future in as_completed(futures):
+                                future.result()  # This will also raise exceptions if any occurred
+
+                        save_data[j] = {'rgb': {'front': {}, 'side': {}, 'bird': {}, 'hand': {}},
+                                        'depth': {'front': {}, 'side': {}, 'bird': {}, 'hand': {}},
+                                        'semantic_all': {'front': {}, 'side': {}, 'bird': {}, 'hand': {}},
+                                        'semantic_robot': {'front': {}, 'side': {}, 'bird': {}, 'hand': {}},
+                                        'semantic_object': {'front': {}, 'side': {}, 'bird': {}}}
+
                     total_traj -= 1
                         
                     pref_log[i] = {'actions': [], 'rewards': []}
@@ -242,24 +309,6 @@ def main():
                 elif frame_idx > 0: # skip the very first step as there is no action/reward yet
                     pref_log[i]['actions'].append(actions[i].cpu().numpy())
                     pref_log[i]['rewards'].append(rewards[i].cpu().numpy())
-            
-            if total_traj < 0:
-                break
-
-            for key, step_pref_log in infos['observations']['preflog'].items():
-                for i in range(num_envs):
-                    if key not in pref_log[i]:
-                        pref_log[i][key] = []
-                    pref_log[i][key].append(step_pref_log[i].cpu().numpy())
-            # for i in range(env_cfg.scene.num_envs):
-            #     if 'front_rgb' not in pref_log[i]:
-            #         pref_log[i]['front_rgb'] = []
-            #     front = infos['observations']['rgb']['image1'][i].cpu().numpy()
-            #     front_image = (np.clip(front, 0, 1) * 255).astype(np.uint8)
-            #     pref_log[i]['front_rgb'].append(front_image)
-
-            #trajectory directory
-            for i in range(env_cfg.scene.num_envs):
                 if not os.path.exists(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}")):
                     #trajectory directory
                     os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}"))
@@ -292,42 +341,173 @@ def main():
                     os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","bird"))
                     os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","hand"))
 
+            if total_traj <= 0:
+                break
 
-            # import pdb; pdb.set_trace() 
-            # images = infos['observations']['rgb']['image']
+            for key, step_pref_log in infos['observations']['preflog'].items():
+                for i in range(num_envs):
+                    if key not in pref_log[i]:
+                        pref_log[i][key] = []
+                    pref_log[i][key].append(step_pref_log[i].cpu().numpy())
+
+            images = infos['observations']['rgb']['image']
             images1 = infos['observations']['rgb']['image1']
             images2 = infos['observations']['rgb']['image2']
             images3 = infos['observations']['rgb']['image3']
-            for i in range(env_cfg.scene.num_envs):
-                    # save_images_to_file(images[i].cpu(),os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","rgb","hand",f"{steps_per_traj[i]:03d}.jpg"))
-                    save_images_to_file(images1[i].cpu(),os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","rgb","front",f"{steps_per_traj[i]:03d}.jpg"))
-                    save_images_to_file(images2[i].cpu(),os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","rgb","side",f"{steps_per_traj[i]:03d}.jpg"))
-                    save_images_to_file(images3[i].cpu(),os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","rgb","bird",f"{steps_per_traj[i]:03d}.jpg"))
-            # depth = infos['observations']['depth']['image']
+            depth = infos['observations']['depth']['image']
             depth1 = infos['observations']['depth']['image1']
             depth2 = infos['observations']['depth']['image2']
             depth3 = infos['observations']['depth']['image3']
-            for i in range(env_cfg.scene.num_envs):
-                # np.savez_compressed(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","depth","hand",f"{steps_per_traj[i]:03d}.npz"), depth=depth[i].cpu().numpy())
-                np.savez_compressed(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","depth","front",f"{steps_per_traj[i]:03d}.npz"), depth=depth1[i].cpu().numpy())
-                np.savez_compressed(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","depth","side",f"{steps_per_traj[i]:03d}.npz"), depth=depth2[i].cpu().numpy())
-                np.savez_compressed(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","depth","bird",f"{steps_per_traj[i]:03d}.npz"), depth=depth3[i].cpu().numpy())
-            # semantic = infos['observations']['semantic']['image']
+            semantic = infos['observations']['semantic']['image']
             semantic1 = infos['observations']['semantic']['image1']
             semantic2 = infos['observations']['semantic']['image2']
             semantic3 = infos['observations']['semantic']['image3']
-            # semantic_rgb = semantic[:, :, :, :3]
+            semantic_rgb = semantic[:, :, :, :3]
             semantic1_rgb = semantic1[:, :, :, :3]
             semantic2_rgb = semantic2[:, :, :, :3]
             semantic3_rgb = semantic3[:, :, :, :3]
             for i in range(env_cfg.scene.num_envs):
-                    # save_images_to_file(semantic_rgb[i].cpu()/255.0,os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_all","hand",f"{steps_per_traj[i]:03d}.jpg"))
-                    save_images_to_file(semantic1_rgb[i].cpu()/255.0,os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_all","front",f"{steps_per_traj[i]:03d}.jpg"))
-                    save_images_to_file(semantic2_rgb[i].cpu()/255.0,os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_all","side",f"{steps_per_traj[i]:03d}.jpg"))
-                    save_images_to_file(semantic3_rgb[i].cpu()/255.0,os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_all","bird",f"{steps_per_traj[i]:03d}.jpg"))
+                save_data[i]['rgb']['hand'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","rgb","hand",f"{steps_per_traj[i]:03d}.jpg")] = images[i]
+                save_data[i]['rgb']['front'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","rgb","front",f"{steps_per_traj[i]:03d}.jpg")] = images1[i]
+                save_data[i]['rgb']['side'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","rgb","side",f"{steps_per_traj[i]:03d}.jpg")] = images2[i]
+                save_data[i]['rgb']['bird'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","rgb","bird",f"{steps_per_traj[i]:03d}.jpg")] = images3[i]
+
+                save_data[i]['depth']['hand'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","depth","hand",f"{steps_per_traj[i]:03d}.npz")] = depth[i].cpu()
+                save_data[i]['depth']['front'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","depth","front",f"{steps_per_traj[i]:03d}.npz")] = depth1[i].cpu()
+                save_data[i]['depth']['side'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","depth","side",f"{steps_per_traj[i]:03d}.npz")] = depth2[i].cpu()
+                save_data[i]['depth']['bird'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","depth","bird",f"{steps_per_traj[i]:03d}.npz")] = depth3[i].cpu()
+
+                save_data[i]['semantic_all']['hand'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_all","hand",f"{steps_per_traj[i]:03d}.jpg")] = semantic_rgb[i]/255.0
+                save_data[i]['semantic_all']['front'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_all","front",f"{steps_per_traj[i]:03d}.jpg")] = semantic1_rgb[i]/255.0
+                save_data[i]['semantic_all']['side'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_all","side",f"{steps_per_traj[i]:03d}.jpg")] = semantic2_rgb[i]/255.0
+                save_data[i]['semantic_all']['bird'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_all","bird",f"{steps_per_traj[i]:03d}.jpg")] = semantic3_rgb[i]/255.0
+
+            for i in range(env_cfg.scene.num_envs):
+                 hard_reset_prim_visibility(f"/World/envs/env_{i}/Object",stage,False) 
+            env.unwrapped.sim.render()
+            # sensor.reset()
+            sensor.update(dt=0, force_recompute=True) 
+            # sensor1.reset()
+            sensor1.update(dt=0, force_recompute=True) 
+            # sensor2.reset()
+            sensor2.update(dt=0, force_recompute=True)
+            # sensor3.reset()
+            sensor3.update(dt=0, force_recompute=True)
+
+            obs,infos = env.get_observations()
+            semantic_robot = infos['observations']['semantic']['image']
+            semantic1_robot = infos['observations']['semantic']['image1']
+            semantic2_robot = infos['observations']['semantic']['image2']
+            semantic3_robot = infos['observations']['semantic']['image3']
+            semantic_rgb_robot = semantic_robot[:, :, :, :3]
+            semantic1_rgb_robot = semantic1_robot[:, :, :, :3]
+            semantic2_rgb_robot = semantic2_robot[:, :, :, :3]
+            semantic3_rgb_robot = semantic3_robot[:, :, :, :3]
+            for i in range(env_cfg.scene.num_envs):
+                save_data[i]['semantic_robot']['hand'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","hand",f"{steps_per_traj[i]:03d}.jpg")] = semantic_rgb_robot[i]/255.0
+                save_data[i]['semantic_robot']['front'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","front",f"{steps_per_traj[i]:03d}.jpg")] = semantic1_rgb_robot[i]/255.0
+                save_data[i]['semantic_robot']['side'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","side",f"{steps_per_traj[i]:03d}.jpg")] = semantic2_rgb_robot[i]/255.0
+                save_data[i]['semantic_robot']['bird'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","bird",f"{steps_per_traj[i]:03d}.jpg")] = semantic3_rgb_robot[i]/255.0
+            for i in range(env_cfg.scene.num_envs):
+                 hard_reset_prim_visibility(f"/World/envs/env_{i}/Robot",stage,False)     
+                 hard_reset_prim_visibility(f"/World/envs/env_{i}/Object",stage,True)
+            # import pdb; pdb.set_trace()
+            # env.unwrapped.sim.step()
+            env.unwrapped.sim.render()
+            # pdb.set_trace()
+            # env.unwrapped.render()
+            # sensor.reset()
+            sensor.update(dt=0, force_recompute=True) 
+            # sensor1.reset()
+            sensor1.update(dt=0, force_recompute=True) 
+            # sensor2.reset()
+            sensor2.update(dt=0, force_recompute=True)
+            # sensor3.reset()
+            sensor3.update(dt=0, force_recompute=True)
+            obs,infos = env.get_observations()
+            # semantic_object = infos['observations']['semantic']['image']
+            semantic1_object = infos['observations']['semantic']['image1']
+            semantic2_object = infos['observations']['semantic']['image2']
+            semantic3_object = infos['observations']['semantic']['image3']
+            # semantic_rgb_object = semantic_object[:, :, :, :3]
+            semantic1_rgb_object = semantic1_object[:, :, :, :3]
+            semantic2_rgb_object = semantic2_object[:, :, :, :3]
+            semantic3_rgb_object = semantic3_object[:, :, :, :3]
+            for i in range(env_cfg.scene.num_envs):
+                save_data[i]['semantic_object']['front'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","front",f"{steps_per_traj[i]:03d}.jpg")] = semantic1_rgb_object[i]/255.0
+                save_data[i]['semantic_object']['side'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","side",f"{steps_per_traj[i]:03d}.jpg")] = semantic2_rgb_object[i]/255.0
+                save_data[i]['semantic_object']['bird'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","bird",f"{steps_per_traj[i]:03d}.jpg")] = semantic3_rgb_object[i]/255.0
+
+            
+            # if frame_idx % 10 == 0 and frame_idx > 0:
+                for i in range(env_cfg.scene.num_envs):
+                        with ThreadPoolExecutor(max_workers=8) as executor:
+                            futures = []
+                            for type_cam in ['rgb','depth','semantic_all','semantic_robot','semantic_object']:
+                                for cam in ['front','side','bird','hand']:
+                                    if cam == 'hand' and type_cam == 'semantic_object':
+                                            continue
+                                    for file_path in save_data[i][type_cam][cam]:
+                                        if type_cam == 'depth':
+                                            futures.append(executor.submit(
+                                                np.savez_compressed,
+                                                file_path,
+                                                save_data[i][type_cam][cam][file_path])
+                                            )
+                                        else:
+                                            # import pdb; pdb.set_trace()
+                                            futures.append(executor.submit(
+                                                save_images_to_file,
+                                                save_data[i][type_cam][cam][file_path],
+                                                file_path
+                                            ))
+                            # Wait for all threads to complete
+                            for future in as_completed(futures):
+                                future.result()  # This will also raise exceptions if any occurred
+
+                        save_data[i] = {'rgb': {'front': {}, 'side': {}, 'bird': {}, 'hand': {}},
+                                        'depth': {'front': {}, 'side': {}, 'bird': {}, 'hand': {}},
+                                        'semantic_all': {'front': {}, 'side': {}, 'bird': {}, 'hand': {}},
+                                        'semantic_robot': {'front': {}, 'side': {}, 'bird': {}, 'hand': {}},
+                                        'semantic_object': {'front': {}, 'side': {}, 'bird': {}}}
+                        
+
+
+            # # import pdb; pdb.set_trace() 
+            # images = infos['observations']['rgb']['image']
+            # images1 = infos['observations']['rgb']['image1']
+            # images2 = infos['observations']['rgb']['image2']
+            # images3 = infos['observations']['rgb']['image3']
+            # for i in range(env_cfg.scene.num_envs):
+            #         save_images_to_file(images[i].cpu(),os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","rgb","hand",f"{steps_per_traj[i]:03d}.jpg"))
+            #         save_images_to_file(images1[i].cpu(),os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","rgb","front",f"{steps_per_traj[i]:03d}.jpg"))
+            #         save_images_to_file(images2[i].cpu(),os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","rgb","side",f"{steps_per_traj[i]:03d}.jpg"))
+            #         save_images_to_file(images3[i].cpu(),os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","rgb","bird",f"{steps_per_traj[i]:03d}.jpg"))
+            # depth = infos['observations']['depth']['image']
+            # depth1 = infos['observations']['depth']['image1']
+            # depth2 = infos['observations']['depth']['image2']
+            # depth3 = infos['observations']['depth']['image3']
+            # for i in range(env_cfg.scene.num_envs):
+            #     np.savez_compressed(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","depth","hand",f"{steps_per_traj[i]:03d}.npz"), depth=depth[i].cpu().numpy())
+            #     np.savez_compressed(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","depth","front",f"{steps_per_traj[i]:03d}.npz"), depth=depth1[i].cpu().numpy())
+            #     np.savez_compressed(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","depth","side",f"{steps_per_traj[i]:03d}.npz"), depth=depth2[i].cpu().numpy())
+            #     np.savez_compressed(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","depth","bird",f"{steps_per_traj[i]:03d}.npz"), depth=depth3[i].cpu().numpy())
+            # semantic = infos['observations']['semantic']['image']
+            # semantic1 = infos['observations']['semantic']['image1']
+            # semantic2 = infos['observations']['semantic']['image2']
+            # semantic3 = infos['observations']['semantic']['image3']
+            # semantic_rgb = semantic[:, :, :, :3]
+            # semantic1_rgb = semantic1[:, :, :, :3]
+            # semantic2_rgb = semantic2[:, :, :, :3]
+            # semantic3_rgb = semantic3[:, :, :, :3]
+            # for i in range(env_cfg.scene.num_envs):
+            #         save_images_to_file(semantic_rgb[i].cpu()/255.0,os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_all","hand",f"{steps_per_traj[i]:03d}.jpg"))
+            #         save_images_to_file(semantic1_rgb[i].cpu()/255.0,os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_all","front",f"{steps_per_traj[i]:03d}.jpg"))
+            #         save_images_to_file(semantic2_rgb[i].cpu()/255.0,os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_all","side",f"{steps_per_traj[i]:03d}.jpg"))
+            #         save_images_to_file(semantic3_rgb[i].cpu()/255.0,os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_all","bird",f"{steps_per_traj[i]:03d}.jpg"))
             # for i in range(env_cfg.scene.num_envs):
     
-            #      hard_reset_prim_visibility(f"/World/envs/env_{i}/Object",False) 
+            #      hard_reset_prim_visibility(f"/World/envs/env_{i}/Object",False,stage) 
             # env.unwrapped.sim.render()
             # # sensor.reset()
             # sensor.update(dt=0, force_recompute=True) 
@@ -354,8 +534,8 @@ def main():
             #         save_images_to_file(semantic2_rgb_robot[i].cpu()/255.0,os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","side",f"{steps_per_traj[i]:03d}.jpg"))
             #         save_images_to_file(semantic3_rgb_robot[i].cpu()/255.0,os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","bird",f"{steps_per_traj[i]:03d}.jpg"))
             # for i in range(env_cfg.scene.num_envs):
-            #      hard_reset_prim_visibility(f"/World/envs/env_{i}/Robot",False)     
-            #      hard_reset_prim_visibility(f"/World/envs/env_{i}/Object",True)
+            #      hard_reset_prim_visibility(f"/World/envs/env_{i}/Robot",False,stage)     
+            #      hard_reset_prim_visibility(f"/World/envs/env_{i}/Object",True,stage)
             # # import pdb; pdb.set_trace()
             # # env.unwrapped.sim.step()
             # env.unwrapped.sim.render()
@@ -370,39 +550,41 @@ def main():
             # # sensor3.reset()
             # sensor3.update(dt=0, force_recompute=True)
             # obs,infos = env.get_observations()
-            # semantic_object = infos['observations']['semantic']['image']
+            # # semantic_object = infos['observations']['semantic']['image']
             # semantic1_object = infos['observations']['semantic']['image1']
             # semantic2_object = infos['observations']['semantic']['image2']
             # semantic3_object = infos['observations']['semantic']['image3']
-            # semantic_rgb_object = semantic_object[:, :, :, :3]
+            # # semantic_rgb_object = semantic_object[:, :, :, :3]
             # semantic1_rgb_object = semantic1_object[:, :, :, :3]
             # semantic2_rgb_object = semantic2_object[:, :, :, :3]
             # semantic3_rgb_object = semantic3_object[:, :, :, :3]
             # for i in range(env_cfg.scene.num_envs):
-            #         save_images_to_file(semantic_rgb_object[i].cpu()/255.0,os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","hand",f"{steps_per_traj[i]:03d}.jpg"))
+            #         # save_images_to_file(semantic_rgb_object[i].cpu()/255.0,os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","hand",f"{steps_per_traj[i]:03d}.jpg"))
             #         save_images_to_file(semantic1_rgb_object[i].cpu()/255.0,os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","front",f"{steps_per_traj[i]:03d}.jpg"))
             #         save_images_to_file(semantic2_rgb_object[i].cpu()/255.0,os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","side",f"{steps_per_traj[i]:03d}.jpg"))
             #         save_images_to_file(semantic3_rgb_object[i].cpu()/255.0,os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","bird",f"{steps_per_traj[i]:03d}.jpg"))
 
-            # # # Append row to CSV
-            # # with open(csv_file, mode="a", newline="") as f:
-            # #     writer = csv.writer(f)
-            # #     for i in range(env_cfg.scene.num_envs):
-            # #         save_images_to_file(images[i].cpu()/255.0,f"frames/front/rgb_env{i}_{frame_idx}.jpg")
-            # #         save_images_to_file(images1[i].cpu()/255.0,f"frames/side/rgb_env{i}_{frame_idx}.jpg")
-            # #         save_images_to_file(images2[i].cpu()/255.0,f"frames/bird/rgb_env{i}_{frame_idx}.jpg")
-            # #         # Save depth maps as compressed .npz
-            # #         writer.writerow([frame_idx, i, cube_data[i][:3].cpu().numpy(), cube_data[i][3:7].cpu().numpy(),robot._data.root_state_w[i][:3].cpu().numpy(),robot._data.root_state_w[i][3:7].cpu().numpy(),cube_changed_pos[i].cpu().numpy(),cube_changed_ore[i].cpu().numpy(),
-            # #                          f"frames/front/rgb_env{i}_{frame_idx}.jpg",f"frames/side/rgb_env{i}_{frame_idx}.jpg",f"frames/bird/rgb_env{i}_{frame_idx}.jpg",f"frames/front/depth_{frame_idx}.npz",f"frames/side/depth_{frame_idx}.npz",f"frames/bird/depth_{frame_idx}.npz",
-            # #                          env.unwrapped.scene.env_origins[i].cpu().numpy(),f"frames/front/semantic_env{i}_{frame_idx}.jpg",f"frames/side/semantic_env{i}_{frame_idx}.jpg",f"frames/bird/semantic_env{i}_{frame_idx}.jpg",f"frames/front/semantic_object_only_env{i}_{frame_idx}.jpg",
-            # #                          f"frames/side/semantic_object_only_env{i}_{frame_idx}.jpg",f"frames/bird/semantic_object_only_env{i}_{frame_idx}.jpg",f"frames/front/semantic_object_only_env{i}_{frame_idx}.jpg",f"frames/side/semantic_object_only_env{i}_{frame_idx}.jpg",f"frames/bird/semantic_object_only_env{i}_{frame_idx}.jpg"])
-            # for i in range(env_cfg.scene.num_envs):
-            #      hard_reset_prim_visibility(f"/World/envs/env_{i}/Robot",True)     
-            #      hard_reset_prim_visibility(f"/World/envs/env_{i}/Object",True) 
+            # # Append row to CSV
+            # with open(csv_file, mode="a", newline="") as f:
+            #     writer = csv.writer(f)
+            #     for i in range(env_cfg.scene.num_envs):
+            #         save_images_to_file(images[i].cpu()/255.0,f"frames/front/rgb_env{i}_{frame_idx}.jpg")
+            #         save_images_to_file(images1[i].cpu()/255.0,f"frames/side/rgb_env{i}_{frame_idx}.jpg")
+            #         save_images_to_file(images2[i].cpu()/255.0,f"frames/bird/rgb_env{i}_{frame_idx}.jpg")
+            #         # Save depth maps as compressed .npz
+            #         writer.writerow([frame_idx, i, cube_data[i][:3].cpu().numpy(), cube_data[i][3:7].cpu().numpy(),robot._data.root_state_w[i][:3].cpu().numpy(),robot._data.root_state_w[i][3:7].cpu().numpy(),cube_changed_pos[i].cpu().numpy(),cube_changed_ore[i].cpu().numpy(),
+            #                          f"frames/front/rgb_env{i}_{frame_idx}.jpg",f"frames/side/rgb_env{i}_{frame_idx}.jpg",f"frames/bird/rgb_env{i}_{frame_idx}.jpg",f"frames/front/depth_{frame_idx}.npz",f"frames/side/depth_{frame_idx}.npz",f"frames/bird/depth_{frame_idx}.npz",
+            #                          env.unwrapped.scene.env_origins[i].cpu().numpy(),f"frames/front/semantic_env{i}_{frame_idx}.jpg",f"frames/side/semantic_env{i}_{frame_idx}.jpg",f"frames/bird/semantic_env{i}_{frame_idx}.jpg",f"frames/front/semantic_object_only_env{i}_{frame_idx}.jpg",
+            #                          f"frames/side/semantic_object_only_env{i}_{frame_idx}.jpg",f"frames/bird/semantic_object_only_env{i}_{frame_idx}.jpg",f"frames/front/semantic_object_only_env{i}_{frame_idx}.jpg",f"frames/side/semantic_object_only_env{i}_{frame_idx}.jpg",f"frames/bird/semantic_object_only_env{i}_{frame_idx}.jpg"])
+            for i in range(env_cfg.scene.num_envs):
+                 hard_reset_prim_visibility(f"/World/envs/env_{i}/Robot",stage,True)     
+                 hard_reset_prim_visibility(f"/World/envs/env_{i}/Object",stage,True) 
+            
+            
             frame_idx+=1
             for i in range(len(steps_per_traj)):
                 steps_per_traj[i] += 1
-            
+            print(f"Frame: {frame_idx} completed.")
 
         if args_cli.video:
             timestep += 1
@@ -418,8 +600,8 @@ def main():
     # close the simulator
     env.close()
 
-def hard_reset_prim_visibility(prim_path, visible=True):
-    stage = omni.usd.get_context().get_stage()
+def hard_reset_prim_visibility(prim_path, stage, visible=True):
+    # stage = omni.usd.get_context().get_stage()
     prim = stage.GetPrimAtPath(prim_path)
     if not prim.IsValid():
         print(f"[WARN] Prim not found at {prim_path}")
