@@ -78,8 +78,8 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
         # torch.Size([4, 480, 640, 1])
         # '''
         semantic_segmentation_mapping = {
-            "class:object": (255, 36, 66, 255),
-            "class:table": (0, 0, 0, 255),
+            "class:object": (255, 0, 0, 255),
+            "class:table": (0, 255, 0, 255),
             "class:robot_franka_panda": (0, 0, 255, 255),
         },
         )
@@ -96,6 +96,11 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
                 focal_length=13.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 5)
             ),
             offset=CameraCfg.OffsetCfg(pos=(0.25,1.55,0.25), rot=(0.0,0.0,0.70711,-0.70711), convention="ros"),
+            semantic_segmentation_mapping = {
+            "class:object": (255, 0, 0, 255),
+            "class:table": (0, 255, 0, 255),
+            "class:robot_franka_panda": (0, 0, 255, 255),
+        },
         )
 
         # External camera: bird-eye
@@ -110,6 +115,11 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
                 focal_length=13.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 5)
             ),
             offset=CameraCfg.OffsetCfg(pos=(0.25,0,1.75), rot=(0.0,0.70711,0.70711,0.0), convention="ros"),
+            semantic_segmentation_mapping = {
+            "class:object": (255, 0, 0, 255),
+            "class:table": (0, 255, 0, 255),
+            "class:robot_franka_panda": (0, 0, 255, 255),
+        },
         )
 
         # Set Cube as object
