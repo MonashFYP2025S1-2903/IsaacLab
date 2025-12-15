@@ -56,7 +56,7 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=13.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 5)
             ),
-            offset=CameraCfg.OffsetCfg(pos=(0.08, 0.0, -0.03), rot=(0.70707,0.00687 , -0.01138, -0.70702), convention="ros"),
+            offset=CameraCfg.OffsetCfg(pos=(0.08, 0.0, -0.035), rot=(0.70707,0.00687 , -0.01138, -0.70702), convention="ros"),
             semantic_segmentation_mapping = {
             "class:object": (255, 0, 0, 255),
             "class:table": (0, 255, 0, 255),
