@@ -145,9 +145,9 @@ def main():
     dt = env.unwrapped.step_dt
 
     #file locations
-    # data_dir = "/media/sh-d61-cps-hri/franka_panda_portable_disk_2T/FYP2025S1_2903/oneil_test"
+    data_dir = "/media/sh-d61-cps-hri/franka_panda_portable_disk_2T/FYP2025S1_2903/oneil_test"
     # data_dir = "/media/sh-d61-cps-hri/franka_panda_portable_disk_2T/FYP2025S1_2903/mohammad_test"
-    data_dir = "/home/sh-d61-cps-hri/hri-pl-frm-mvvd/data/mounted_dataset/work/mount_data/pref_learn"
+    # data_dir = "/home/sh-d61-cps-hri/hri-pl-frm-mvvd/data/mounted_dataset/work/mount_data/pref_learn"
 
     #make checkpoint directory
     checkpoint_location = resume_path[resume_path.rfind('/') + 1:]
@@ -225,12 +225,12 @@ def main():
             os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","front"))
             os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","side"))
             os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","bird"))
-            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","hand"))
+
 
             os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","front"))
             os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","side"))
             os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","bird"))
-            os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","hand"))
+
 
     stage = omni.usd.get_context().get_stage()
     
@@ -277,6 +277,8 @@ def main():
                                 for cam in ['front','side','bird','hand']:
                                     if cam == 'hand' and type_cam == 'semantic_object':
                                             continue
+                                    if cam == 'hand' and type_cam == 'semantic_robot':
+                                            continue
                                     for file_path in save_data[j][type_cam][cam]:
                                         if type_cam == 'depth':
                                             futures.append(executor.submit(
@@ -297,7 +299,7 @@ def main():
                         save_data[j] = {'rgb': {'front': {}, 'side': {}, 'bird': {}, 'hand': {}},
                                         'depth': {'front': {}, 'side': {}, 'bird': {}, 'hand': {}},
                                         'semantic_all': {'front': {}, 'side': {}, 'bird': {}, 'hand': {}},
-                                        'semantic_robot': {'front': {}, 'side': {}, 'bird': {}, 'hand': {}},
+                                        'semantic_robot': {'front': {}, 'side': {}, 'bird': {}},
                                         'semantic_object': {'front': {}, 'side': {}, 'bird': {}}}
 
                     total_traj -= 1
@@ -334,12 +336,11 @@ def main():
                     os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","front"))
                     os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","side"))
                     os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","bird"))
-                    os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","hand"))
 
                     os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","front"))
                     os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","side"))
                     os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","bird"))
-                    os.makedirs(os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","hand"))
+
 
             if total_traj <= 0:
                 break
@@ -404,7 +405,6 @@ def main():
             semantic2_rgb_robot = semantic2_robot[:, :, :, :3]
             semantic3_rgb_robot = semantic3_robot[:, :, :, :3]
             for i in range(env_cfg.scene.num_envs):
-                save_data[i]['semantic_robot']['hand'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","hand",f"{steps_per_traj[i]:03d}.jpg")] = semantic_rgb_robot[i]/255.0
                 save_data[i]['semantic_robot']['front'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","front",f"{steps_per_traj[i]:03d}.jpg")] = semantic1_rgb_robot[i]/255.0
                 save_data[i]['semantic_robot']['side'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","side",f"{steps_per_traj[i]:03d}.jpg")] = semantic2_rgb_robot[i]/255.0
                 save_data[i]['semantic_robot']['bird'][os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_robot","bird",f"{steps_per_traj[i]:03d}.jpg")] = semantic3_rgb_robot[i]/255.0
@@ -447,6 +447,8 @@ def main():
                                 for cam in ['front','side','bird','hand']:
                                     if cam == 'hand' and type_cam == 'semantic_object':
                                             continue
+                                    if cam == 'hand' and type_cam == 'semantic_robot':
+                                            continue
                                     for file_path in save_data[i][type_cam][cam]:
                                         if type_cam == 'depth':
                                             futures.append(executor.submit(
@@ -468,7 +470,7 @@ def main():
                         save_data[i] = {'rgb': {'front': {}, 'side': {}, 'bird': {}, 'hand': {}},
                                         'depth': {'front': {}, 'side': {}, 'bird': {}, 'hand': {}},
                                         'semantic_all': {'front': {}, 'side': {}, 'bird': {}, 'hand': {}},
-                                        'semantic_robot': {'front': {}, 'side': {}, 'bird': {}, 'hand': {}},
+                                        'semantic_robot': {'front': {}, 'side': {}, 'bird': {}},
                                         'semantic_object': {'front': {}, 'side': {}, 'bird': {}}}
                         
 
