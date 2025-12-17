@@ -69,3 +69,8 @@ tests/
 
 # Docker history
 .isaac-lab-docker-history
+
+frames/
+Fusion_Out/
+Image_Embeddings_Out/
+.cache/
