@@ -8,16 +8,29 @@
    * Changes:
       * Add camera config
       * Add walls
-      * Add semantic segmentation tags
+      * Add semantic segmentation tags and color mapping
+      * Change table
+      * Change robot
+      * Change simulation settings
    * Related files:
       * `isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/lift_camera_env_cfg.py`
       * `isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/config/franka/joint_pos_camera_env_cfg.py`
-* Get semantic segmentation for Preference User Model
+      * `usd_assets/robot.usd`
+      * `source/isaaclab_assets/isaaclab_assets/robots/franka.py`
+* Get camera data for Preference User Model
    * Changes:
-      * set object to be invisible, then get semantic segmentation, then reset object to be visible
-      * set robot to be invisible, then get semantic segmentation, then reset robot to be visible
+      * Set object to be invisible, then get camera data, then reset object to be visible
+      * Set robot to be invisible, then get camera data, then reset robot to be visible
+      * Added rgb, depth, and semantic segmentation to observation
+      * Obtain observation before reset
+      * position logging for manual reward evaluation
    * Related files:
-      * `isaaclab/source/isaaclab/isaaclab/envs/manager_based_rl_env.py`
+      * `source/isaaclab/isaaclab/envs/manager_based_rl_env.py`
+      * `scripts/reinforcement_learning/rsl_rl/play_oneil.py`
+      * `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/lift_camera_env_cfg.py`
+      * `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/mdp/observations.py`
+
+    
 ## How to use
 - Test with random agent
    - `python isaaclab/scripts/environment/random_agent.py --task Isaac-Lift-Cube-Franka-Camera-v0 --num_envs 2 --enable_cameras`
