@@ -296,3 +296,5 @@ class LiftCameraEnvCfg(ManagerBasedRLEnvCfg):
 
         self.sim.render.enable_dl_denoiser = False
         self.sim.render.antialiasing_mode = "FXAA"
+        
+        self.rerender_on_reset = True

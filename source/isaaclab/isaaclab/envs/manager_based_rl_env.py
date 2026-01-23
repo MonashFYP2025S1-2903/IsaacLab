@@ -212,6 +212,8 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
             self.obs_buf = self.observation_manager.compute()
             self.recorder_manager.record_post_step()
 
+        self.extras["pobserve"] = self.observation_manager.compute()
+
         # -- reset envs that terminated/timed-out and log the episode information
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         if len(reset_env_ids) > 0:
