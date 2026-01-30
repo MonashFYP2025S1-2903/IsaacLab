@@ -6,18 +6,35 @@
 ### Changes
 * Task configuration
    * Changes:
-      * Add camera config
-      * Add walls
-      * Add semantic segmentation tags
-   * Related files:
-      * `isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/lift_camera_env_cfg.py`
-      * `isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/config/franka/joint_pos_camera_env_cfg.py`
-* Get semantic segmentation for Preference User Model
+      * `isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/lift_camera_env_cfg.py`:
+          * Change table
+          * Change simulation settings
+      * `isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/config/franka/joint_pos_camera_env_cfg.py`:
+          * Add camera config
+          * Add walls
+          * Add semantic segmentation tags and color mapping
+      * `usd_assets/robot.usd`:
+          * Change robot
+      *  `source/isaaclab_assets/isaaclab_assets/robots/franka.py`:
+          * Change robot
+      *  `usd_assets/FYP_shop_table_2.usd`:
+          * Change table
+* Get camera data for Preference User Model
    * Changes:
-      * set object to be invisible, then get semantic segmentation, then reset object to be visible
-      * set robot to be invisible, then get semantic segmentation, then reset robot to be visible
-   * Related files:
-      * `isaaclab/source/isaaclab/isaaclab/envs/manager_based_rl_env.py`
+      * `source/isaaclab/isaaclab/envs/manager_based_rl_env.py`:
+          * Set object to be invisible, then get camera data, then reset object to be visible
+          * Set robot to be invisible, then get camera data, then reset robot to be visible
+          * Obtain observation before reset
+      * `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/lift_camera_env_cfg.py`:
+          * Added rgb, depth, and semantic segmentation to observation
+          * position logging for manual reward evaluation
+      * `scripts/reinforcement_learning/rsl_rl/play_oneil.py`:
+          * Set object to be invisible, then get camera data, then reset object to be visible
+          * Set robot to be invisible, then get camera data, then reset robot to be visible
+          * Obtain observation before reset
+      * `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/mdp/observations.py`:
+          * position logging for manual reward evaluation
+    
 ## How to use
 - Test with random agent
    - `python isaaclab/scripts/environment/random_agent.py --task Isaac-Lift-Cube-Franka-Camera-v0 --num_envs 2 --enable_cameras`
