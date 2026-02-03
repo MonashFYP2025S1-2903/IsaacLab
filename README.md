@@ -42,14 +42,14 @@
    - `python isaaclab/scripts/reinforcement_learning/rsl_rl/train.py --task Isaac-Lift-Cube-Franka-Camera-v0 --num_envs 2 --enable_cameras`
 
 ## Dataset
-  Checkpoint
-      env
-          traj
-              rgb
-              depth
-              semantic_all
-              semantic_object
-              semantic_robot
+  - Checkpoint
+      - env
+          - traj
+              - rgb
+              - depth
+              - semantic_all
+              - semantic_object
+              - semantic_robot
 
 ---
 
