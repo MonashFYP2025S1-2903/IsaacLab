@@ -46,11 +46,11 @@
       - env
           - traj
               - rgb
-                      - 000
-                      - 001
-                      - 002
-                      - ...
-                      - 150
+                -  000
+                - 001
+                - 002
+                - ...
+                - 150
               - depth
               - semantic_all
               - semantic_object
