@@ -40,7 +40,17 @@
    - `python isaaclab/scripts/environment/random_agent.py --task Isaac-Lift-Cube-Franka-Camera-v0 --num_envs 2 --enable_cameras`
 - Train rsl_rl PPO agent
    - `python isaaclab/scripts/reinforcement_learning/rsl_rl/train.py --task Isaac-Lift-Cube-Franka-Camera-v0 --num_envs 2 --enable_cameras`
-   
+
+## Dataset
+  Checkpoint
+      env
+          traj
+              rgb
+              depth
+              semantic_all
+              semantic_object
+              semantic_robot
+
 ---
 
 # Isaac Lab
