@@ -647,7 +647,7 @@ def save_step_data(which_obs,traj, steps_per_traj, pref_log, checkpoint_dir, sen
     for key, step_pref_log in infos[which_obs[i]]['preflog'].items():
         if key not in pref_log[i]:
             pref_log[i][key] = []
-            pref_log[i][key].append(step_pref_log[i].cpu().numpy())
+        pref_log[i][key].append(step_pref_log[i].cpu().numpy())
 
 
     images = infos[which_obs[i]]['rgb']['image']
