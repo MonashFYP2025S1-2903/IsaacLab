@@ -40,7 +40,32 @@
    - `python isaaclab/scripts/environment/random_agent.py --task Isaac-Lift-Cube-Franka-Camera-v0 --num_envs 2 --enable_cameras`
 - Train rsl_rl PPO agent
    - `python isaaclab/scripts/reinforcement_learning/rsl_rl/train.py --task Isaac-Lift-Cube-Franka-Camera-v0 --num_envs 2 --enable_cameras`
-   
+
+## Dataset
+  - Checkpoint
+      - env
+          - traj
+              - rgb
+                -  000
+                - 001
+                - 002
+                - ...
+                - 150
+              - depth
+              - semantic_all
+              - semantic_object
+              - semantic_robot
+        
+Each data type collects data for 150 steps(full duration of trajectory) in same format as shown for rgb
+
+Rgb and semantic data are in jpg images
+
+Depth data is in npz file
+
+Within trajectory file there is a npz for pref_log which is the manual logging of other data(actions, positions) for the entire trajectory
+
+Checkpoint model is within Checkpoint file
+
 ---
 
 # Isaac Lab

@@ -278,8 +278,6 @@ def main():
                 if dones[i]:
                     # import pdb; pdb.set_trace()
                     print(f"Environment {i} done at frame {frame_idx}")
-                    pref_log[i]['actions'].pop()  # remove last action corresponding to terminal state that has no observation
-                    pref_log[i]['rewards'].pop() # remove last reward as with action
                     
                     which_obs[i] = 'pobserve'
                     
