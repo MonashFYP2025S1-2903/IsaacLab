@@ -30,7 +30,7 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
 
         # Set Franka as robot
         self.scene.robot = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-        self.scene.robot.init_state.pos = [0.0, 0.0, -0.045]
+        self.scene.robot.init_state.pos = [0.0, 0.0, -0.055] #z=0.45
         # Set actions for the specific robot type (franka)
         self.actions.arm_action = mdp.JointPositionActionCfg(
             asset_name="robot", joint_names=["panda_joint.*"], scale=0.5, use_default_offset=True
@@ -131,7 +131,7 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
         # Props/Blocks/MultiColorCube/multi_color_cube_instanceable.usd
         self.scene.object = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object",
-            init_state=RigidObjectCfg.InitialStateCfg(pos=[0.5, 0, 0], rot=[1, 0, 0, 0]),
+            init_state=RigidObjectCfg.InitialStateCfg(pos=[0.5, 0, 0.32], rot=[1, 0, 0, 0]),#z pos =0.0
             spawn=UsdFileCfg(
                 usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/MultiColorCube/multi_color_cube_instanceable.usd",
                 semantic_tags=[("class", "object")],
@@ -172,6 +172,12 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
             prim_path="{ENV_REGEX_NS}/wall_4",
             spawn=sim_utils.CuboidCfg(size=[wall_thickness, wall_size, wall_size]),
             init_state=AssetBaseCfg.InitialStateCfg(pos=[wall_size/2, 0, 0])
+        )
+
+        self.scene.table_padding = AssetBaseCfg( #X
+            prim_path="{ENV_REGEX_NS}/padding",
+            spawn=sim_utils.CuboidCfg(size=[0.75,1.6,0.027],collision_props=sim_utils.CollisionPropertiesCfg()),
+            init_state=AssetBaseCfg.InitialStateCfg(pos=[0.45, 0.0, -0.056])
         )
 
         # Listens to the required transforms
