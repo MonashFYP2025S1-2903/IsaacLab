@@ -212,39 +212,47 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
             self.obs_buf = self.observation_manager.compute()
             self.recorder_manager.record_post_step()
 
-        self.extras["pobserve"] = self.observation_manager.compute()
 
-        env_ids = torch.arange(self.num_envs, device=self.device)
+        # SAVE SEMANTIC SEGMENTATION WITH VARIOUS VISIBILITY FOR FYP 2025S1-2903
+        
+        # all visibility true
+        # self.extras["pobserve"] = self.observation_manager.compute()
 
-        rigid_objects = self.scene.rigid_objects['object']            
-        rigid_objects.set_visibility(False, env_ids=env_ids)  
-        self.sim.render()
-        # sensor.reset()
-        self.scene.sensors["camera_ext1"].update(dt=0, force_recompute=True) 
-        # sensor1.reset()
-        self.scene.sensors["camera_ext2"].update(dt=0, force_recompute=True) 
-        # sensor2.reset()
-        self.scene.sensors["camera_bird"].update(dt=0, force_recompute=True)
-        # sensor3.reset()
-        self.scene.sensors["camera"].update(dt=0, force_recompute=True)
-        self.extras["semantic_robot"] = self.observation_manager.compute_group('semantic')
+        # env_ids = torch.arange(self.num_envs, device=self.device)
 
-        robots = self.scene.articulations['robot']          # get robot
-        robots.set_visibility(False, env_ids=env_ids)
-        rigid_objects.set_visibility(True, env_ids=env_ids)   # set visibility
-        self.sim.render()
-        # sensor.reset()
-        self.scene.sensors["camera_ext1"].update(dt=0, force_recompute=True) 
-        # sensor1.reset()
-        self.scene.sensors["camera_ext2"].update(dt=0, force_recompute=True) 
-        # sensor2.reset()
-        self.scene.sensors["camera_bird"].update(dt=0, force_recompute=True)
-        # sensor3.reset()
-        self.scene.sensors["camera"].update(dt=0, force_recompute=True)
-        self.extras["semantic_object"] = self.observation_manager.compute_group('semantic')
+        # object visibility false
+        # rigid_objects = self.scene.rigid_objects['object']            
+        # rigid_objects.set_visibility(False, env_ids=env_ids)  
+        # self.sim.render()
+        # # sensor.reset()
+        # self.scene.sensors["camera_ext1"].update(dt=0, force_recompute=True) 
+        # # sensor1.reset()
+        # self.scene.sensors["camera_ext2"].update(dt=0, force_recompute=True) 
+        # # sensor2.reset()
+        # self.scene.sensors["camera_bird"].update(dt=0, force_recompute=True)
+        # # sensor3.reset()
+        # self.scene.sensors["camera"].update(dt=0, force_recompute=True)
+        # self.extras["semantic_robot"] = self.observation_manager.compute_group('semantic')
 
-        robots.set_visibility(True, env_ids=env_ids)
-        rigid_objects.set_visibility(True, env_ids=env_ids)
+        # robot visibility false
+        # robots = self.scene.articulations['robot']          # get robot
+        # robots.set_visibility(False, env_ids=env_ids)
+        # rigid_objects.set_visibility(True, env_ids=env_ids)   # set visibility
+        # self.sim.render()
+        # # sensor.reset()
+        # self.scene.sensors["camera_ext1"].update(dt=0, force_recompute=True) 
+        # # sensor1.reset()
+        # self.scene.sensors["camera_ext2"].update(dt=0, force_recompute=True) 
+        # # sensor2.reset()
+        # self.scene.sensors["camera_bird"].update(dt=0, force_recompute=True)
+        # # sensor3.reset()
+        # self.scene.sensors["camera"].update(dt=0, force_recompute=True)
+        # self.extras["semantic_object"] = self.observation_manager.compute_group('semantic')
+
+        # robots.set_visibility(True, env_ids=env_ids)
+        # rigid_objects.set_visibility(True, env_ids=env_ids)
+
+
 
         # -- reset envs that terminated/timed-out and log the episode information
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)

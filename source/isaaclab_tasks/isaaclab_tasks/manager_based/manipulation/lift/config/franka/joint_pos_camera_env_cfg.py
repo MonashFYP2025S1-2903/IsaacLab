@@ -131,7 +131,7 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
         # Props/Blocks/MultiColorCube/multi_color_cube_instanceable.usd
         self.scene.object = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object",
-            init_state=RigidObjectCfg.InitialStateCfg(pos=[0.5, 0, 0.32], rot=[1, 0, 0, 0]),#z pos =0.0
+            init_state=RigidObjectCfg.InitialStateCfg(pos=[0.5, 0, 0.04], rot=[1, 0, 0, 0]),#z pos =0.0
             spawn=UsdFileCfg(
                 usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/MultiColorCube/multi_color_cube_instanceable.usd",
                 semantic_tags=[("class", "object")],
@@ -174,6 +174,7 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
             init_state=AssetBaseCfg.InitialStateCfg(pos=[wall_size/2, 0, 0])
         )
 
+        # padding to table to match real world setup
         self.scene.table_padding = AssetBaseCfg( #X
             prim_path="{ENV_REGEX_NS}/padding",
             spawn=sim_utils.CuboidCfg(size=[0.75,1.6,0.027],collision_props=sim_utils.CollisionPropertiesCfg()),
