@@ -9,6 +9,35 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, R
 
 
 @configclass
+class LearnedRewardSettings:
+    """Parameters for the preference-based learned reward model.
+
+    Consumed by ``rsl_rl/runners/learned_reward.py`` via ``LearnedRewardCfg``
+    when ``LiftCubePPORunnerCfg.use_learned_reward`` is True.
+    Checkpoints are produced by ``preference_learning/train_reward_model.py``.
+    """
+
+    rm_checkpoint: str = ""
+    """Absolute path to the reward model checkpoint (.pt file).
+
+    The checkpoint is created by ``train_reward_model.py`` and saved to the
+    experiment output directory, e.g.:
+        /datasets/work/hri-fyp2025s1-2903/work/.../experiments/<run_name>/reward_model.pt
+
+    The checkpoint embeds the architecture config (hidden sizes, obs_mode,
+    architecture name), so the correct network is reconstructed automatically.
+    """
+
+    reward_weight: float = 1.0
+    """Scalar multiplier applied to the learned reward before replacing the env reward.
+
+    The raw model output is an unbounded scalar (or tanh-bounded for
+    ``bounded_tanh`` / ``bounded_sigmoid`` architectures). Keep at 1.0 unless
+    the learned reward scale needs to be matched to the env reward magnitude.
+    """
+
+
+@configclass
 class LiftCubePPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 1500
@@ -35,3 +64,19 @@ class LiftCubePPORunnerCfg(RslRlOnPolicyRunnerCfg):
         desired_kl=0.01,
         max_grad_norm=1.0,
     )
+
+    # ── Learned reward injection ────────────────────────────────────────────
+    # When True, the environment reward is replaced at every PPO rollout step
+    # by the output of a pretrained preference-based reward model.
+    # Handled by on_policy_runner.py → learned_reward.py → LearnedRewardWrapper.
+    # Leave False for standard PPO with the environment's ground-truth reward.
+    use_learned_reward: bool = False
+
+    # Populated only when use_learned_reward = True.
+    # Set rm_checkpoint to the .pt file produced by train_reward_model.py.
+    # Example for the apr21a_baseline run (privileged obs, fragment_length=1):
+    #   learned_reward = LearnedRewardSettings(
+    #       rm_checkpoint="/datasets/work/.../experiments/apr21a_baseline/reward_model.pt",
+    #       reward_weight=1.0,
+    #   )
+    learned_reward: LearnedRewardSettings = LearnedRewardSettings()
