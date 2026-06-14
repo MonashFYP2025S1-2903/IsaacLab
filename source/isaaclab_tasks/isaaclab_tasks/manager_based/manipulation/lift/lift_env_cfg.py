@@ -3,7 +3,14 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+import os
 from dataclasses import MISSING
+
+# Observation-space flag — evaluated at MODULE IMPORT / cfg construction (BEFORE hydra), so it
+# actually takes effect. Default True = full 36-dim obs. Per-run override with env var
+# LIFT_INCLUDE_JOINT_VEL=0 -> position-only 27-dim (drops joint_vel; narrows the sim2real
+# velocity-dynamics gap). Resulting obs terms are written to each run's params/env.yaml -> reproducible.
+INCLUDE_JOINT_VEL = os.environ.get("LIFT_INCLUDE_JOINT_VEL", "1").lower() not in ("0", "false", "no")
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg, DeformableObjectCfg, RigidObjectCfg
@@ -113,6 +120,8 @@ class ObservationsCfg:
         def __post_init__(self):
             self.enable_corruption = True
             self.concatenate_terms = True
+            if not INCLUDE_JOINT_VEL:
+                self.joint_vel = None   # position-only observation (sim2real); see INCLUDE_JOINT_VEL
 
     # observation groups
     policy: PolicyCfg = PolicyCfg()
