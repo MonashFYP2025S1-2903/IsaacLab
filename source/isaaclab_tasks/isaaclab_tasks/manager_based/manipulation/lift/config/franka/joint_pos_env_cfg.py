@@ -121,7 +121,11 @@ class FrankaCubeLiftEnvCfg(LiftEnvCfg):
                     max_angular_velocity=1000.0,
                     max_linear_velocity=1000.0,
                     max_depenetration_velocity=5.0,
-                    disable_gravity=True,
+                    # IMPORTANT: keep gravity ENABLED for RL policy training. If the cube's gravity is
+                    # disabled it FLOATS, so the policy never learns to grasp -- it only bumps the floating
+                    # cube up to collect the lift reward. This silently broke Franka-lift policy training
+                    # (disabled 2025-08-27 in commit 145bd641, bundled in a camera/denoiser commit).
+                    disable_gravity=False,
                 ),
             ),
         )
