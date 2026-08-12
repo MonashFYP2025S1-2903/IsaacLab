@@ -45,7 +45,7 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
     table = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/Table",
         init_state=AssetBaseCfg.InitialStateCfg(pos=[0.25, 0, -0.5], rot=[0.707, 0, 0, 0.707]),
-        spawn=UsdFileCfg(usd_path=f"usd_assets/FYP_shop_table_2.usd",scale=(0.01, 0.01, 0.01),
+        spawn=UsdFileCfg(usd_path=f"/home/sh-d61-cps-hri/hri-pl-frm-mvvd/isaaclab/usd_assets/FYP_shop_table_2.usd",scale=(0.01, 0.01, 0.01),
                          semantic_tags=[("class", "table")]),
     )
 
@@ -107,46 +107,46 @@ class ObservationsCfg:
         actions = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
-            self.enable_corruption = True
+            self.enable_corruption = False
             self.concatenate_terms = True
    
     
-    @configclass
-    class RGBCfg(ObsGroup):
-        """Observations for image group."""
-        image = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera"), "data_type": "rgb"})
-        image1 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_ext1"), "data_type": "rgb"})
-        image2 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_ext2"), "data_type": "rgb"})
-        image3 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_bird"), "data_type": "rgb"})
+    # @configclass
+    # class RGBCfg(ObsGroup):
+    #     """Observations for image group."""
+    #     image = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera"), "data_type": "rgb"})
+    #     image1 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_ext1"), "data_type": "rgb"})
+    #     image2 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_ext2"), "data_type": "rgb"})
+    #     image3 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_bird"), "data_type": "rgb"})
         
-        def __post_init__(self):
-            self.enable_corruption = False
-            self.concatenate_terms = False
+    #     def __post_init__(self):
+    #         self.enable_corruption = False
+    #         self.concatenate_terms = False
     
 
-    @configclass
-    class DepthCfg(ObsGroup):
-        """Observations for depth group."""
-        image = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera"), "data_type": "depth"})
-        image1 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_ext1"), "data_type": "depth"})
-        image2 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_ext2"), "data_type": "depth"})
-        image3 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_bird"), "data_type": "depth"})
+    # @configclass
+    # class DepthCfg(ObsGroup):
+    #     """Observations for depth group."""
+    #     image = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera"), "data_type": "depth"})
+    #     image1 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_ext1"), "data_type": "depth"})
+    #     image2 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_ext2"), "data_type": "depth"})
+    #     image3 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_bird"), "data_type": "depth"})
         
-        def __post_init__(self):
-            self.enable_corruption = False
-            self.concatenate_terms = False
+    #     def __post_init__(self):
+    #         self.enable_corruption = False
+    #         self.concatenate_terms = False
 
-    @configclass
-    class SemanticCfg(ObsGroup):
-        """Observations for semantic group."""
-        image = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera"), "data_type": "semantic_segmentation"})
-        image1 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_ext1"), "data_type": "semantic_segmentation"})
-        image2 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_ext2"), "data_type": "semantic_segmentation"})
-        image3 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_bird"), "data_type": "semantic_segmentation"})
+    # @configclass
+    # class SemanticCfg(ObsGroup):
+    #     """Observations for semantic group."""
+    #     image = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera"), "data_type": "semantic_segmentation"})
+    #     image1 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_ext1"), "data_type": "semantic_segmentation"})
+    #     image2 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_ext2"), "data_type": "semantic_segmentation"})
+    #     image3 = ObsTerm(func=mdp.image, params={"sensor_cfg": SceneEntityCfg("camera_bird"), "data_type": "semantic_segmentation"})
 
-        def __post_init__(self):
-            self.enable_corruption = False
-            self.concatenate_terms = False
+    #     def __post_init__(self):
+    #         self.enable_corruption = False
+    #         self.concatenate_terms = False
 
     @configclass
     class PrefLogCfg(ObsGroup):
@@ -182,9 +182,9 @@ class ObservationsCfg:
 
     # observation groups
     policy: PolicyCfg = PolicyCfg()
-    rgb: RGBCfg = RGBCfg()
-    depth: DepthCfg = DepthCfg()
-    semantic: SemanticCfg = SemanticCfg()
+    # rgb: RGBCfg = RGBCfg()
+    # depth: DepthCfg = DepthCfg()
+    # semantic: SemanticCfg = SemanticCfg()
     preflog: PrefLogCfg = PrefLogCfg()
 
 
@@ -283,8 +283,7 @@ class LiftCameraEnvCfg(ManagerBasedRLEnvCfg):
         """Post initialization."""
         # general settings
         self.decimation = 2
-        self.episode_length_s = 5.0
-        # simulation settings
+        self.episode_length_s = 5.0   # simulation settings
         self.sim.dt = 1/60  # 60Hz
         self.sim.render_interval = self.decimation
         

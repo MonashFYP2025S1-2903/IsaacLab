@@ -155,11 +155,12 @@ def main():
             # cube_changed_ore = cube_changed[1]
 
 
-            env.step(actions)
+            obs, rew,dones,infos = env.step(actions)
             # for _ in range(50):
             #     env.render()
 
-
+            images = infos['observations']['rgb']['image']
+            images_sen = sensor.data.output["rgb"]
             
             # sensor.reset()
             # sensor.update(dt=0, force_recompute=True)   

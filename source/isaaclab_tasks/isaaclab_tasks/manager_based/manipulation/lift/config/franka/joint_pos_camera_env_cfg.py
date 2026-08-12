@@ -45,87 +45,87 @@ class FrankaCubeLiftCameraEnvCfg(LiftCameraEnvCfg):
         self.commands.object_pose.body_name = "panda_hand"
         
         self.img_resolution_scale = 2    # sacle the image resolution
-        # Eye-in-hand Camera
-        self.scene.camera = TiledCameraCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/panda_hand/front_cam",
-            update_period=0.0,
-            height=1080,
-            width=1920,
-            data_types=["rgb", "depth", "semantic_segmentation"],
-            colorize_semantic_segmentation=True,
-            spawn=sim_utils.PinholeCameraCfg(
-                focal_length=13.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 5)
-            ),
-            offset=CameraCfg.OffsetCfg(pos=(0.085, 0.0, -0.04), rot=(0.70707,0.00687 , -0.01138, -0.70702), convention="ros"),
-            semantic_segmentation_mapping = {
-            "class:object": (255, 0, 0, 255),
-            "class:table": (0, 255, 0, 255),
-            "class:robot_franka_panda": (0, 0, 255, 255),
-        },
-        )
+        # # Eye-in-hand Camera
+        # self.scene.camera = TiledCameraCfg(
+        #     prim_path="{ENV_REGEX_NS}/Robot/panda_hand/front_cam",
+        #     update_period=0.0,
+        #     height=1080,
+        #     width=1920,
+        #     data_types=["rgb", "depth", "semantic_segmentation"],
+        #     colorize_semantic_segmentation=True,
+        #     spawn=sim_utils.PinholeCameraCfg(
+        #         focal_length=13.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 5)
+        #     ),
+        #     offset=CameraCfg.OffsetCfg(pos=(0.085, 0.0, -0.04), rot=(0.70707,0.00687 , -0.01138, -0.70702), convention="ros"),
+        #     semantic_segmentation_mapping = {
+        #     "class:object": (255, 0, 0, 255),
+        #     "class:table": (0, 255, 0, 255),
+        #     "class:robot_franka_panda": (0, 0, 255, 255),
+        # },
+        # )
         
-        # External camera: front
-        self.scene.camera_ext1 = TiledCameraCfg(
-            prim_path="{ENV_REGEX_NS}/exterior1",
-            update_period=0.0,
-            height=1080,
-            width=1920,
-            data_types=["rgb", "depth", "semantic_segmentation"],
-            colorize_semantic_segmentation=True,
-            spawn=sim_utils.PinholeCameraCfg(
-                focal_length=13.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 5)
-            ),
-            offset=CameraCfg.OffsetCfg(pos=(1.8,0.0,0.35), rot=(0.5,-0.5,-0.5,0.5), convention="ros"),
-            # '''
-        # {'semantic_segmentation': {'idToLabels': {'0': {'class': 'BACKGROUND'}, 
-        # '1': {'class': 'UNLABELLED'}, '2': {'class': 'robot'}, 
-        # '3': {'class': 'object'}, '4': {'class': 'table'}}}}
-        # torch.Size([4, 480, 640, 1])
-        # '''
-        semantic_segmentation_mapping = {
-            "class:object": (255, 0, 0, 255),
-            "class:table": (0, 255, 0, 255),
-            "class:robot_franka_panda": (0, 0, 255, 255),
-        },
-        )
+        # # External camera: front
+        # self.scene.camera_ext1 = TiledCameraCfg(
+        #     prim_path="{ENV_REGEX_NS}/exterior1",
+        #     update_period=0.0,
+        #     height=1080,
+        #     width=1920,
+        #     data_types=["rgb", "depth", "semantic_segmentation"],
+        #     colorize_semantic_segmentation=True,
+        #     spawn=sim_utils.PinholeCameraCfg(
+        #         focal_length=13.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 5)
+        #     ),
+        #     offset=CameraCfg.OffsetCfg(pos=(1.8,0.0,0.35), rot=(0.5,-0.5,-0.5,0.5), convention="ros"),
+        #     # '''
+        # # {'semantic_segmentation': {'idToLabels': {'0': {'class': 'BACKGROUND'}, 
+        # # '1': {'class': 'UNLABELLED'}, '2': {'class': 'robot'}, 
+        # # '3': {'class': 'object'}, '4': {'class': 'table'}}}}
+        # # torch.Size([4, 480, 640, 1])
+        # # '''
+        # semantic_segmentation_mapping = {
+        #     "class:object": (255, 0, 0, 255),
+        #     "class:table": (0, 255, 0, 255),
+        #     "class:robot_franka_panda": (0, 0, 255, 255),
+        # },
+        # )
 
-        # External camera: side
-        self.scene.camera_ext2 = TiledCameraCfg(
-            prim_path="{ENV_REGEX_NS}/exterior2",
-            update_period=0.0,
-            height=1080,
-            width=1920,
-            data_types=["rgb", "depth", "semantic_segmentation"],
-            colorize_semantic_segmentation=True,
-            spawn=sim_utils.PinholeCameraCfg(
-                focal_length=13.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 5)
-            ),
-            offset=CameraCfg.OffsetCfg(pos=(0.25,1.55,0.25), rot=(0.0,0.0,0.70711,-0.70711), convention="ros"),
-            semantic_segmentation_mapping = {
-            "class:object": (255, 0, 0, 255),
-            "class:table": (0, 255, 0, 255),
-            "class:robot_franka_panda": (0, 0, 255, 255),
-        },
-        )
+        # # External camera: side
+        # self.scene.camera_ext2 = TiledCameraCfg(
+        #     prim_path="{ENV_REGEX_NS}/exterior2",
+        #     update_period=0.0,
+        #     height=1080,
+        #     width=1920,
+        #     data_types=["rgb", "depth", "semantic_segmentation"],
+        #     colorize_semantic_segmentation=True,
+        #     spawn=sim_utils.PinholeCameraCfg(
+        #         focal_length=13.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 5)
+        #     ),
+        #     offset=CameraCfg.OffsetCfg(pos=(0.25,1.55,0.25), rot=(0.0,0.0,0.70711,-0.70711), convention="ros"),
+        #     semantic_segmentation_mapping = {
+        #     "class:object": (255, 0, 0, 255),
+        #     "class:table": (0, 255, 0, 255),
+        #     "class:robot_franka_panda": (0, 0, 255, 255),
+        # },
+        # )
 
-        # External camera: bird-eye
-        self.scene.camera_bird = TiledCameraCfg(
-            prim_path="{ENV_REGEX_NS}/bird",
-            update_period=0.0,
-            height=1080,
-            width=1920,
-            data_types=["rgb", "depth", "semantic_segmentation"],
-            colorize_semantic_segmentation=True,
-            spawn=sim_utils.PinholeCameraCfg(
-                focal_length=13.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 5)
-            ),
-            offset=CameraCfg.OffsetCfg(pos=(0.25,0,1.75), rot=(0.0,0.70711,0.70711,0.0), convention="ros"),
-            semantic_segmentation_mapping = {
-            "class:object": (255, 0, 0, 255),
-            "class:table": (0, 255, 0, 255),
-            "class:robot_franka_panda": (0, 0, 255, 255),
-        },
-        )
+        # # External camera: bird-eye
+        # self.scene.camera_bird = TiledCameraCfg(
+        #     prim_path="{ENV_REGEX_NS}/bird",
+        #     update_period=0.0,
+        #     height=1080,
+        #     width=1920,
+        #     data_types=["rgb", "depth", "semantic_segmentation"],
+        #     colorize_semantic_segmentation=True,
+        #     spawn=sim_utils.PinholeCameraCfg(
+        #         focal_length=13.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 5)
+        #     ),
+        #     offset=CameraCfg.OffsetCfg(pos=(0.25,0,1.75), rot=(0.0,0.70711,0.70711,0.0), convention="ros"),
+        #     semantic_segmentation_mapping = {
+        #     "class:object": (255, 0, 0, 255),
+        #     "class:table": (0, 255, 0, 255),
+        #     "class:robot_franka_panda": (0, 0, 255, 255),
+        # },
+        # )
 
         # Set Cube as object
         # Props/Blocks/MultiColorCube/multi_color_cube_instanceable.usd

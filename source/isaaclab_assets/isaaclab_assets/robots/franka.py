@@ -24,7 +24,7 @@ from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
 
 FRANKA_PANDA_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"usd_assets/robot.usd",
+        usd_path=f"/home/sh-d61-cps-hri/hri-pl-frm-mvvd/isaaclab/usd_assets/robot.usd",
         activate_contact_sensors=False,
         semantic_tags=[("class", "robot_franka_panda")],
         rigid_props=sim_utils.RigidBodyPropertiesCfg(

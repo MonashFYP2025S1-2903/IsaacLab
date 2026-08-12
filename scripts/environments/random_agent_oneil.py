@@ -78,6 +78,7 @@ def main():
     # File to write to
     csv_file = "predict.csv"
     counter = 0
+    env_ids = torch.arange(env_cfg.scene.num_envs)
 
     # If file doesn’t exist yet, create and write header
     file_exists = os.path.isfile(csv_file)
@@ -193,7 +194,61 @@ def main():
 
                     # counter += 1
                     # print(counter)
-            
+            for i in range(env_cfg.scene.num_envs):
+                 hard_reset_prim_visibility(f"/World/envs/env_{i}/Robot",False)        
+            env.unwrapped.sim.render()
+            sensor.reset()
+            sensor.update(dt=0, force_recompute=True) 
+            semantic = sensor.data.output["semantic_segmentation"]
+            semantic1 = sensor1.data.output["semantic_segmentation"]
+            semantic2 = sensor2.data.output["semantic_segmentation"]
+            # semantic3 = sensor3.data.output["semantic_segmentation"]
+            semantic_rgb = semantic[:, :, :, :3]
+            semantic1_rgb = semantic1[:, :, :, :3]
+            semantic2_rgb = semantic2[:, :, :, :3]
+            # semantic3_rgb = semantic3[:, :, :, :3]
+            for i in range(env_cfg.scene.num_envs):
+                    save_images_to_file(semantic_rgb[i].cpu()/255.0,f"frames/semantic/front/cube_env{i}_{frame_idx}.jpg")
+                    save_images_to_file(semantic1_rgb[i].cpu()/255.0,f"frames/semantic/side/cube_env{i}_{frame_idx}.jpg")
+                    save_images_to_file(semantic2_rgb[i].cpu()/255.0,f"frames/semantic/bird/cube_env{i}_{frame_idx}.jpg")
+                    # save_images_to_file(semantic3_rgb[i].cpu()/255.0,os.path.join(checkpoint_dir, f"env_{i}",f"traj_{traj[i]:03d}","semantic_object","hand",f"{steps_per_traj[i]:03d}.jpg"))
+            for i in range(env_cfg.scene.num_envs):
+                 hard_reset_prim_visibility(f"/World/envs/env_{i}/Robot",True)     
+                 hard_reset_prim_visibility(f"/World/envs/env_{i}/Object",False) 
+            asset.set_visibility(False, env_ids=env_ids)
+            robot.set_visibility(True, env_ids=env_ids) 
+            env.unwrapped.sim.render()
+            sensor.reset()
+            sensor.update(dt=0, force_recompute=True) 
+            semantic = sensor.data.output["semantic_segmentation"]
+            semantic1 = sensor1.data.output["semantic_segmentation"]
+            semantic2 = sensor2.data.output["semantic_segmentation"]
+            # semantic3 = sensor3.data.output["semantic_segmentation"]
+            semantic_rgb = semantic[:, :, :, :3]
+            semantic1_rgb = semantic1[:, :, :, :3]
+            semantic2_rgb = semantic2[:, :, :, :3]
+            # semantic3_rgb = semantic3[:, :, :, :3]
+            for i in range(env_cfg.scene.num_envs):
+                    save_images_to_file(semantic_rgb[i].cpu()/255.0,f"frames/semantic/front/robot_env{i}_{frame_idx}.jpg")
+                    save_images_to_file(semantic1_rgb[i].cpu()/255.0,f"frames/semantic/side/robot_env{i}_{frame_idx}.jpg")
+                    save_images_to_file(semantic2_rgb[i].cpu()/255.0,f"frames/semantic/bird/robot_env{i}_{frame_idx}.jpg")
+                    # save_images_to_file(semantic3_rgb[i].cpu()/255.0,f"frames/semantic/hand/robot_env{i}_{frame_idx}.jpg")
+
+            # Append row to CSV
+            # with open(csv_file, mode="a", newline="") as f:
+            #     writer = csv.writer(f)
+            #     for i in range(env_cfg.scene.num_envs):
+            #         save_images_to_file(images[i].cpu()/255.0,f"frames/front/rgb_env{i}_{frame_idx}.jpg")
+            #         save_images_to_file(images1[i].cpu()/255.0,f"frames/side/rgb_env{i}_{frame_idx}.jpg")
+            #         save_images_to_file(images2[i].cpu()/255.0,f"frames/bird/rgb_env{i}_{frame_idx}.jpg")
+            #         # Save depth maps as compressed .npz
+            #         writer.writerow([frame_idx, i, cube_data[i][:3].cpu().numpy(), cube_data[i][3:7].cpu().numpy(),robot._data.root_state_w[i][:3].cpu().numpy(),robot._data.root_state_w[i][3:7].cpu().numpy(),cube_changed_pos[i].cpu().numpy(),cube_changed_ore[i].cpu().numpy(),
+            #                          f"frames/front/rgb_env{i}_{frame_idx}.jpg",f"frames/side/rgb_env{i}_{frame_idx}.jpg",f"frames/bird/rgb_env{i}_{frame_idx}.jpg",f"frames/front/depth_{frame_idx}.npz",f"frames/side/depth_{frame_idx}.npz",f"frames/bird/depth_{frame_idx}.npz",
+            #                          env.unwrapped.scene.env_origins[i].cpu().numpy(),f"frames/front/semantic_env{i}_{frame_idx}.jpg",f"frames/side/semantic_env{i}_{frame_idx}.jpg",f"frames/bird/semantic_env{i}_{frame_idx}.jpg",f"frames/front/semantic_object_only_env{i}_{frame_idx}.jpg",
+            #                          f"frames/side/semantic_object_only_env{i}_{frame_idx}.jpg",f"frames/bird/semantic_object_only_env{i}_{frame_idx}.jpg",f"frames/front/semantic_object_only_env{i}_{frame_idx}.jpg",f"frames/side/semantic_object_only_env{i}_{frame_idx}.jpg",f"frames/bird/semantic_object_only_env{i}_{frame_idx}.jpg"])
+            for i in range(env_cfg.scene.num_envs):
+                 hard_reset_prim_visibility(f"/World/envs/env_{i}/Robot",True)     
+                 hard_reset_prim_visibility(f"/World/envs/env_{i}/Object",True) 
                                                         
             
             if frame_idx>10000:

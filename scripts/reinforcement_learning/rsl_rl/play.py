@@ -138,6 +138,9 @@ def main():
     dt = env.unwrapped.step_dt
 
     # reset environment
+    cube = env.unwrapped.scene["object"]
+    robot = env.unwrapped.scene["robot"]    
+    cube.write_root_pose_to_sim(torch.tensor([0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]))
     obs, _ = env.get_observations()
     timestep = 0
     # simulate environment
@@ -147,8 +150,14 @@ def main():
         with torch.inference_mode():
             # agent stepping
             actions = policy(obs)
+            print(f"Actions: {actions}")
             # env stepping
             obs, _, _, _ = env.step(actions)
+            joint_vel = obs[0][9:18]
+            joint_pos = obs[0][0:9]
+            print(f"Joint Velocities: {joint_vel}")
+            print(f"Joint Positions: {joint_pos}")
+            # import pdb; pdb.set_trace()
         if args_cli.video:
             timestep += 1
             # Exit the play loop after recording one video

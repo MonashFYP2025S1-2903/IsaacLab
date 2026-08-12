@@ -86,7 +86,6 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
         # initialize data and constants
         # -- set the framerate of the gym video recorder wrapper so that the playback speed of the produced video matches the simulation
         self.metadata["render_fps"] = 1 / self.step_dt
-
         print("[INFO]: Completed setting up the environment...")
 
     """
@@ -171,6 +170,7 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
             A tuple containing the observations, rewards, resets (terminated and truncated) and extras.
         """
         # process actions
+        
         self.action_manager.process_action(action.to(self.device))
 
         self.recorder_manager.record_pre_step()
@@ -183,7 +183,9 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
         for _ in range(self.cfg.decimation):
             self._sim_step_counter += 1
             # set actions into buffers
+            
             self.action_manager.apply_action()
+            
             # set actions into simulator
             self.scene.write_data_to_sim()
             # simulate
@@ -256,6 +258,10 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
 
         # -- reset envs that terminated/timed-out and log the episode information
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
+
+        # INSERTED FOR TESTING, record previous observations for final observation
+        # self.prev_obs = self.obs_buf
+
         if len(reset_env_ids) > 0:
             # trigger recorder terms for pre-reset calls
             self.recorder_manager.record_pre_reset(reset_env_ids)
@@ -280,6 +286,10 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
         # -- compute observations
         # note: done after reset to get the correct observations for reset envs
         self.obs_buf = self.observation_manager.compute()
+
+        # INSERTED FOR TESTING, store previous observations
+        # self.obs_buf['prev_obs'] = self.prev_obs
+
         # ##############################
         # # FYP 2025S1-2903
         # # start

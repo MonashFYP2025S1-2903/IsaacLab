@@ -9,6 +9,7 @@ from isaaclab.utils import configclass
 
 from .manager_based_env_cfg import ManagerBasedEnvCfg
 from .ui import ManagerBasedRLEnvWindow
+# from isaaclab.cube_prediction_mv.model import CubePositionNet
 
 
 @configclass
@@ -78,3 +79,4 @@ class ManagerBasedRLEnvCfg(ManagerBasedEnvCfg):
 
     Please refer to the :class:`isaaclab.managers.CommandManager` class for more details.
     """
+

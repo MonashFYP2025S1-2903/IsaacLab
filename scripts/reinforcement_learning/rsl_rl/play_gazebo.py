@@ -4,10 +4,14 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 """Script to play a checkpoint if an RL agent from RSL-RL."""
+"""
+./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/play_gazebo.py --task=Isaac-Lift-Cube-Franka-Camera-v0 --num_envs=1 --enable_cameras --load_run /home/sh-d61-cps-hri/hri-pl-frm-mvvd/isaaclab/logs/rsl_rl/franka_lift/2025-09-12_13-48-36 --checkpoint /home/sh-d61-cps-hri/hri-pl-frm-mvvd/isaaclab/logs/rsl_rl/franka_lift/2025-09-12_13-48-36/model_1050.pt --headless
+"""
 
 """Launch Isaac Sim Simulator first."""
 
 import argparse
+import csv
 import sys
 
 from isaaclab.app import AppLauncher
@@ -152,6 +156,12 @@ def main():
     # simulate environment
     frame =0
     obs, _ = env.get_observations()
+    csv_file = "/home/sh-d61-cps-hri/hri-pl-frm-mvvd/obs_data_isaac_real.csv"
+    file_exists = os.path.isfile(csv_file)
+    with open(csv_file, mode="a", newline="") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(["joint_pos_1","joint_pos_2","joint_pos_3","joint_pos_4","joint_pos_5","joint_pos_6","joint_pos_7","joint_pos_8","joint_pos_9","joint_vel_1","joint_vel_2","joint_vel_3","joint_vel_4","joint_vel_5","joint_vel_6","joint_vel_7","joint_vel_8","joint_vel_9"])  # header row
     while simulation_app.is_running():
         start_time = time.time()
         # run everything in inference mode
@@ -165,29 +175,38 @@ def main():
                 processed_action = torch.from_numpy(processed_obs).to(device=env.unwrapped.device, dtype=torch.float32).unsqueeze(0)
             else:
                 processed_action = torch.tensor(processed_obs, device=env.unwrapped.device, dtype=torch.float32).unsqueeze(0)
-            # processed_action[9:18] = obs[9:18]
-            # processed_action[18:20] = obs[18:20]
+            
+            # obs in shape of tensor in tensor [[]]
+            obs[0][0:9] = processed_action[0][0:9]
+            # obs[0][18:] = processed_action[0][18:]
+            # obs[0] = processed_action[0]
+            # scale = torch.tensor([60, 55, 25, 41, 115, 103, 88, 4.5, 9], 
+            #          device=obs.device, dtype=torch.float32)
+            # obs[0][9:18] = obs[0][9:18] * scale
+            # # obs[0][10] = jv
+            # # obs[0][8:10] = grip
 
-            # obs[0:8] = processed_action[0:8]
 
+            # record observations to csv file
+            # with open(csv_file, mode="a", newline="") as f:
+            #     writer = csv.writer(f)
+            #     writer.writerow([obs[0][0].item(), obs[0][1].item(), obs[0][2].item(), obs[0][3].item(), obs[0][4].item(), obs[0][5].item(), obs[0][6].item(), obs[0][7].item(), obs[0][8].item(),
+            #                      obs[0][9].item(), obs[0][10].item(), obs[0][11].item(), obs[0][12].item(), obs[0][13].item(), obs[0][14].item(), obs[0][15].item(), obs[0][16].item(), obs[0][17].item()])  # header row
+            
+            
             actions = policy(obs)
             
             # env stepping
             obs, _, dones, infos = env.step(actions)
-            print(f"Observations: {obs}")
             joint_pos = robot._data.joint_pos.cpu().numpy()
             action_to_send = actions.cpu().numpy()
+
             serialized_data = pickle.dumps((joint_pos, action_to_send))
-        
+            # print(f"Joint positions: {joint_pos}")
             # Send data to the server
             socket.send(serialized_data)
             frame +=1
-            # images_sen = sensor.data.output["rgb"]
-            # images1 = infos['observations']['rgb']['image1']
-            # save_images_to_file(images_sen.cpu()/255.0, os.path.join("frames",f"sen_{frame}.jpg"))
-            # save_images_to_file(images1, os.path.join("frames",f"infos_{frame}.jpg"))
-            # if dones[0]:
-            #     import pdb; pdb.set_trace()
+
 
         if args_cli.video:
             timestep += 1
