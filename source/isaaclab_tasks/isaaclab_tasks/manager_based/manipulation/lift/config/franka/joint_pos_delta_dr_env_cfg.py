@@ -193,6 +193,44 @@ class FrankaCubeLiftDeltaDRTableFixEnvCfg_PLAY(FrankaCubeLiftDeltaDRTableFixEnvC
 
 
 @configclass
+class FrankaCubeLiftDeltaDRTableFixActionL2EnvCfg(FrankaCubeLiftDeltaDRTableFixEnvCfg):
+    """Diagnostic (2026-08-14): adds a raw-action-magnitude penalty (mdp.action_l2, NOT clip) on top of
+    TableFix, to test the action-saturation finding from job 29848155 (raw action logging showed 2/8 delta
+    dims pinned at huge, one-signed magnitude -- e.g. mean -36, min -72 -- on the no-wrench delta checkpoint,
+    vs a bounded +/-10-25 symmetric range on the working wrench checkpoint and the working absolute checkpoint).
+
+    Deliberately NOT a clip on the action term or agent_cfg.clip_actions: RSL-RL's rollout computes
+    log_prob/action_mean/action_sigma on the RAW sampled action in PPO.act() (rsl_rl/algorithms/ppo.py
+    line ~144), strictly BEFORE env.step() applies any clip (on_policy_runner.py line ~224-226; clip_actions
+    is applied even later, inside RslRlVecEnvWrapper.step()). Clipping downstream of that call creates a
+    sampled-vs-applied mismatch: PPO's gradient is computed against the unclipped raw action while the
+    reward reflects the clipped physical outcome, so once the raw mean drifts past the clip boundary nothing
+    in the gradient pulls it back (increasing it further doesn't change the clipped outcome, but PPO can't
+    see that) -- a known failure mode, and matches a prior real experience of a clipped-action policy
+    failing to converge for the same reason. mdp.action_l2 penalizes env.action_manager.action directly,
+    i.e. the SAME raw action log_prob is computed on -- no discrepancy, the thing being penalized is exactly
+    the thing PPO is optimizing and exactly the thing actually scaled+applied as the joint delta.
+    ACTION_L2_WEIGHT env-var tunable; default is a first guess (small relative to the ~36-unit task-reward
+    weights), needs checking against a sanity run's actual reward-component scale.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.action_magnitude = RewardTermCfg(
+            func=mdp.action_l2, weight=-float(os.environ.get("ACTION_L2_WEIGHT", "0.01"))
+        )
+
+
+@configclass
+class FrankaCubeLiftDeltaDRTableFixActionL2EnvCfg_PLAY(FrankaCubeLiftDeltaDRTableFixActionL2EnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.num_envs = 50
+        self.scene.env_spacing = 2.5
+        self.observations.policy.enable_corruption = False
+
+
+@configclass
 class FrankaCubeLiftDeltaDRTableFixWrenchEnvCfg(FrankaCubeLiftDeltaDRTableFixEnvCfg):
     """TableFix + EE WRENCH observation/reward (2026-08-07, PROPOSAL -- not yet validated by training).
     Adds the 6D (force+torque) wrench at panda_hand as a new observation term (breaks ONNX/deploy compat with

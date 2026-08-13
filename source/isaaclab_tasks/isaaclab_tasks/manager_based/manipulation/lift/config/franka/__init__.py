@@ -240,6 +240,24 @@ gym.register(
 )
 
 ##
+# Joint Position Control - DELTA + VELOCITY-DR + cube-range + TABLE HEIGHT FIX + raw-action-magnitude penalty
+# (2026-08-14 diagnostic -- see FYP2025S1-2903_deployment_setup_guide.md "Isolation test result, raw-action
+# logging, and root-cause diagnosis" -- tests mdp.action_l2 as a non-clip fix for the action-saturation finding)
+##
+gym.register(
+    id="Isaac-Lift-Cube-Franka-Delta-DR-TableFix-ActionL2-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.joint_pos_delta_dr_env_cfg:FrankaCubeLiftDeltaDRTableFixActionL2EnvCfg",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:LiftCubePPORunnerCfg",
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
+        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
+        "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
+    },
+)
+
+##
 # Joint Position Control - ABSOLUTE + VELOCITY-DR + cube-range + SIM2REAL TABLE HEIGHT FIX
 ##
 gym.register(
