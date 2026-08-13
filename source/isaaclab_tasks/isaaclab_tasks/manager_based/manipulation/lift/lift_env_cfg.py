@@ -114,8 +114,41 @@ class ObservationsCfg:
             self.enable_corruption = True
             self.concatenate_terms = True
 
+    @configclass
+    class PrefLogCfg(ObsGroup):
+        """Observations for preflog group - privileged-state logging for preference-learning trajectory
+        collection (added 2026-08-13, mirrors LiftCameraEnvCfg's PrefLogCfg so play_collect_pref_data.py's
+        --collect_images-off path can collect preference data against camera-less tasks, e.g. TableFix)."""
+
+        # Log positions used in reward functions
+        object_position = ObsTerm(func=mdp.log_object_position, params={"object_cfg": SceneEntityCfg("object")})
+        ee_position = ObsTerm(func=mdp.log_ee_position, params={"ee_frame_cfg": SceneEntityCfg("ee_frame")})
+        goal_position = ObsTerm(
+            func=mdp.log_goal_position,
+            params={"command_name": "object_pose", "robot_cfg": SceneEntityCfg("robot")}
+        )
+
+        # Log joint velocities used in reward functions
+        joint_velocities = ObsTerm(func=mdp.log_joint_velocities, params={"asset_cfg": SceneEntityCfg("robot")})
+        # Log actions used in reward functions
+        current_action = ObsTerm(func=mdp.log_current_action)
+        previous_action = ObsTerm(func=mdp.log_previous_action)
+        action_difference = ObsTerm(func=mdp.log_action_difference)
+
+        # Log observations
+        obs_joint_pos = ObsTerm(func=mdp.joint_pos_rel)
+        obs_joint_vel = ObsTerm(func=mdp.joint_vel_rel)
+        obs_object_position = ObsTerm(func=mdp.object_position_in_robot_root_frame)
+        obs_target_object_position = ObsTerm(func=mdp.generated_commands, params={"command_name": "object_pose"})
+        obs_actions = ObsTerm(func=mdp.last_action)
+
+        def __post_init__(self):
+            self.enable_corruption = False
+            self.concatenate_terms = False
+
     # observation groups
     policy: PolicyCfg = PolicyCfg()
+    preflog: PrefLogCfg = PrefLogCfg()
 
 
 @configclass
