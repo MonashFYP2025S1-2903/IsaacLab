@@ -1,0 +1,1 @@
+frame,env_id,cube_pos,cube_ore,robot_pos,robot_ore,cube_changed_pos,cube_changed_ore,front_img_rgb,side_img_rgb,bird_img_rgb,front_img_dp,side_img_dp,bird_img_dp,env_origin,front_sem,side_sem,bird_sem,front_sem_robot,side_sem_robot,bird_sem_robot,front_sem_object,side_sem_object,bird_sem_object

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot name="multi_color_cube_instanceable">
+  <link name="Render"/>
+</robot>
