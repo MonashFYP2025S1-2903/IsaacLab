@@ -8,7 +8,7 @@ from __future__ import annotations
 import torch
 from typing import TYPE_CHECKING
 
-from isaaclab.assets import RigidObject
+from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils.math import subtract_frame_transforms
 from isaaclab.sensors import FrameTransformer
@@ -70,3 +70,16 @@ def log_previous_action(env: ManagerBasedRLEnv) -> torch.Tensor:
 def log_action_difference(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Log action difference (used in action_rate_l2)."""
     return env.action_manager.action - env.action_manager.prev_action  # Shape: [num_envs, action_dim]
+
+
+def ee_wrench_b(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot", body_names="panda_hand"),
+) -> torch.Tensor:
+    """6D (force+torque) wrench transmitted through the wrist joint into panda_hand, in the parent-body
+    frame -- ground-truth sim equivalent of the real robot's inferred O_F_ext_hat_K (which is joint-torque
+    -> dynamics-subtraction -> Jacobian-transpose projection; this is the same quantity, read directly from
+    the simulator instead of estimated). Shape: [num_envs, 6] = [Fx,Fy,Fz,Tx,Ty,Tz]."""
+    asset: Articulation = env.scene[asset_cfg.name]
+    body_id = asset_cfg.body_ids[0]
+    return asset.data.body_incoming_joint_wrench_b[:, body_id, :]
