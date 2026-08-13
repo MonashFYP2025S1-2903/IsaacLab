@@ -62,6 +62,10 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
         spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
     )
 
+    # wall1:AssetBaseCfg = MISSING
+    # wall2:AssetBaseCfg = MISSING
+
+    
 
 ##
 # MDP settings
@@ -128,7 +132,21 @@ class EventCfg:
             "velocity_range": {},
             "asset_cfg": SceneEntityCfg("object", body_names="Object"),
         },
+
+    
     )
+
+    # random_object_position = EventTerm(
+    #     func=mdp.reset_root_state_with_random_orientation,
+    #     mode="interval",
+    #     params={
+    #         "pose_range": {"x": (-1.0, 1.0), "y": (-1.0, 1.0), "z": (-1.0,1.0)},
+    #         "velocity_range": {},
+    #         "asset_cfg": SceneEntityCfg("object", body_names="Object"),
+    #     },
+    #     interval_range_s=(0.0, 1.0),
+        
+    # )
 
 
 @configclass
@@ -220,3 +238,7 @@ class LiftEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
         self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
         self.sim.physx.friction_correlation_distance = 0.00625
+
+        #self.events.random_object_position.interval_range_s=(0,self.sim.dt)
+        self.sim.render.enable_dl_denoiser = False
+        #self.sim.render.antialiasing_mode = "FXAA"

@@ -26,10 +26,17 @@ class FrankaCubeLiftEnvCfg(LiftEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()
-
+        MAPPING = {
+            "class:object": (255, 36, 66, 255),
+            "class:table": (255, 237, 218, 255),
+            "class:robot": (125, 125, 125, 255),
+            "class:UNLABELLED": (125, 125, 125, 255),
+            "class:BACKGROUND": (10, 10, 10, 255),
+        }
+        
         # Set Franka as robot
         self.scene.robot = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-
+        
         # Set actions for the specific robot type (franka)
         self.actions.arm_action = mdp.JointPositionActionCfg(
             asset_name="robot", joint_names=["panda_joint.*"], scale=0.5, use_default_offset=True
@@ -43,6 +50,64 @@ class FrankaCubeLiftEnvCfg(LiftEnvCfg):
         # Set the body name for the end effector
         self.commands.object_pose.body_name = "panda_hand"
 
+        # self.scene.camera = TiledCameraCfg(
+        # prim_path="{ENV_REGEX_NS}/Robot/panda_hand/front_cam",
+        # update_period=0.0,
+        # height=480,
+        # width=640,
+        # data_types=["rgb", "distance_to_image_plane","semantic_segmentation"],
+        # spawn=sim_utils.PinholeCameraCfg(
+        #     focal_length=15.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 10)
+        # ),
+        # offset=CameraCfg.OffsetCfg(pos=(0, 0.0, 0), rot=(1, 0, 0, 0), convention="ros"),
+
+        # )
+        # self.scene.camera_ext1 = TiledCameraCfg(
+        # prim_path="{ENV_REGEX_NS}/exterior1",
+        # update_period=0.0,
+        # history_length = 0,
+        # height=1080,
+        # width=1920,
+        # data_types=["rgb", "distance_to_image_plane","semantic_segmentation"],
+        # spawn=sim_utils.PinholeCameraCfg(
+        #     focal_length=15.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 10)
+        # ),
+        # offset=CameraCfg.OffsetCfg(pos=(2.5,0.0,0.0), rot=(0.5,-0.5,-0.5,0.5), convention="ros"),
+        # colorize_semantic_segmentation=False,
+        # # '''
+        # # {'semantic_segmentation': {'idToLabels': {'0': {'class': 'BACKGROUND'}, 
+        # # '1': {'class': 'UNLABELLED'}, '2': {'class': 'robot'}, 
+        # # '3': {'class': 'object'}, '4': {'class': 'table'}}}}
+        # # torch.Size([4, 480, 640, 1])
+        # # '''
+        # # semantic_segmentation_mapping = {
+        # #     "class:object": (255, 36, 66, 255),
+        # #     "class:table": (255, 237, 218, 255),
+        # #     "class:robot": (61, 178, 255, 255),
+        # # },
+        # )
+        # self.scene.camera_ext2 = TiledCameraCfg(
+        # prim_path="{ENV_REGEX_NS}/exterior2",
+        # update_period=0.0,
+        # height=480,
+        # width=640,
+        # data_types=["rgb", "distance_to_image_plane","semantic_segmentation"],
+        # spawn=sim_utils.PinholeCameraCfg(
+        #     focal_length=15.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 10)
+        # ),
+        # offset=CameraCfg.OffsetCfg(pos=(0.0,2.5,0.0), rot=(0.0,0.0,0.70711,-0.70711), convention="ros"),
+        # )
+        # self.scene.camera_bird = TiledCameraCfg(
+        # prim_path="{ENV_REGEX_NS}/bird",
+        # update_period=0.0,
+        # height=480,
+        # width=640,
+        # data_types=["rgb", "distance_to_image_plane","semantic_segmentation"],
+        # spawn=sim_utils.PinholeCameraCfg(
+        #     focal_length=15.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 10)
+        # ),
+        # offset=CameraCfg.OffsetCfg(pos=(0,0,5.5), rot=(0.0,0.0,1.0,0.0), convention="ros"),
+        # )
         # Set Cube as object
         self.scene.object = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object",
@@ -56,10 +121,67 @@ class FrankaCubeLiftEnvCfg(LiftEnvCfg):
                     max_angular_velocity=1000.0,
                     max_linear_velocity=1000.0,
                     max_depenetration_velocity=5.0,
+                    # IMPORTANT: keep gravity ENABLED for RL policy training. If the cube's gravity is
+                    # disabled it FLOATS, so the policy never learns to grasp -- it only bumps the floating
+                    # cube up to collect the lift reward. This silently broke Franka-lift policy training
+                    # (disabled 2025-08-27 in commit 145bd641, bundled in a camera/denoiser commit).
                     disable_gravity=False,
                 ),
             ),
         )
+        
+        # self.scene.table = AssetBaseCfg(
+        # prim_path="{ENV_REGEX_NS}/Table",
+        # init_state=AssetBaseCfg.InitialStateCfg(pos=[0.5, 0, 0], rot=[0.707, 0, 0, 0.707]),
+        # spawn=UsdFileCfg(
+        #     usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/table_instanceable.usd",
+        #     semantic_tags=[("class","table")],
+        #     ),
+        # )
+        # self.scene.wall1 = AssetBaseCfg(
+        #     prim_path="{ENV_REGEX_NS}/wall1",
+        #     spawn=sim_utils.CuboidCfg(size=[5.0,0.1,5.0]),
+        #     init_state=AssetBaseCfg.InitialStateCfg(pos=[0.79755,-1.95479,-0.05549])
+        # )
+
+        # self.scene.wall2 = AssetBaseCfg(
+        #     prim_path="{ENV_REGEX_NS}/wall2",
+        #     spawn=sim_utils.CuboidCfg(size=[0.1,5.0,5.0]),
+        #     init_state=AssetBaseCfg.InitialStateCfg(pos=[-1.71779,0.59112,-0.05549])
+        # )
+
+        # # Wall
+        # wall_size = 5.0
+        # wall_thickness = 0.01
+        # self.scene.cuboid_wall_1 = AssetBaseCfg(
+        #     prim_path="{ENV_REGEX_NS}/wall_1",
+        #     spawn=sim_utils.CuboidCfg(size=[wall_size, wall_thickness, wall_size]),
+        #     init_state=AssetBaseCfg.InitialStateCfg(pos=[0, wall_size/2, 0])
+        # )
+
+        # self.scene.cuboid_wall_2 = AssetBaseCfg(
+        #     prim_path="{ENV_REGEX_NS}/wall_2",
+        #     spawn=sim_utils.CuboidCfg(size=[wall_thickness, wall_size, wall_size]),
+        #     init_state=AssetBaseCfg.InitialStateCfg(pos=[-wall_size/2, 0, 0])
+        # )
+
+        # self.scene.cuboid_wall_3 = AssetBaseCfg(
+        #     prim_path="{ENV_REGEX_NS}/wall_3",
+        #     spawn=sim_utils.CuboidCfg(size=[wall_size, wall_thickness, wall_size]),
+        #     init_state=AssetBaseCfg.InitialStateCfg(pos=[0, -wall_size/2, 0])
+        # )
+
+        # self.scene.cuboid_wall_4 = AssetBaseCfg(
+        #     prim_path="{ENV_REGEX_NS}/wall_4",
+        #     spawn=sim_utils.CuboidCfg(size=[wall_thickness, wall_size, wall_size]),
+        #     init_state=AssetBaseCfg.InitialStateCfg(pos=[wall_size/2, 0, 0])
+        # )
+
+        '''self.scene.light = AssetBaseCfg(
+            prim_path="{ENV_REGEX_NS}/lights",
+            init_state=AssetBaseCfg.InitialStateCfg(pos=[1.09699,0.49177,0.91408],rot=[0.70844,-0.01017,-0.01119,0.70561]),
+            spawn=sim_utils.DiskLightCfg(intensity=60000)
+        )'''
 
         # Listens to the required transforms
         marker_cfg = FRAME_MARKER_CFG.copy()
