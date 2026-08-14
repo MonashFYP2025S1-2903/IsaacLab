@@ -84,6 +84,7 @@ simulation_app = app_launcher.app
 """Rest everything follows."""
 
 import gymnasium as gym
+import json
 import os
 import time
 import torch
@@ -116,6 +117,55 @@ def main():
     env_cfg = parse_env_cfg(
         args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
     )
+
+    # Force the cube-spawn curriculum (if this task has one) to its fully-ramped end state for
+    # collection. A freshly-created env's common_step_counter starts at 0 regardless of which policy
+    # checkpoint is loaded, so a curriculum term that only widens the cube-spawn range after N steps of
+    # *this* env's own lifetime would otherwise leave every collection run sampling only the narrow
+    # "easy" range, never the wide range the policy was actually trained/evaluated on (found 2026-08-14:
+    # a full 9-checkpoint collection stayed under the ramp-start step count throughout). Read the wide
+    # end-range values from the curriculum term's own config, not hardcoded, so this keeps working if
+    # the task's curriculum parameters change.
+    collection_metadata = {"task": args_cli.task}
+    widen_term = getattr(env_cfg.curriculum, "widen_cube_range", None)
+    if widen_term is not None:
+        x_end = widen_term.params["x_end"]
+        y_end = widen_term.params["y_end"]
+        event_term = getattr(env_cfg.events, widen_term.params["term_name"])
+        event_term.params["pose_range"]["x"] = x_end
+        event_term.params["pose_range"]["y"] = y_end
+        env_cfg.curriculum.widen_cube_range = None
+        collection_metadata["cube_spawn_range"] = {"x": list(x_end), "y": list(y_end)}
+        print(f"[INFO] Forced cube-spawn range to curriculum's fully-ramped end state: x={x_end}, y={y_end}")
+    else:
+        pr = env_cfg.events.reset_object_position.params["pose_range"]
+        collection_metadata["cube_spawn_range"] = {"x": list(pr["x"]), "y": list(pr["y"])}
+
+    # Snapshot the actual reward-term parameters this env is using, so downstream reward reconstruction
+    # (pref_learning/get_trajectories.py's calculate_reward) can read the real values instead of hardcoding
+    # its own copy that can silently drift out of sync with the task -- exactly how the TABLE_RAISE
+    # is_lifted-threshold bug happened (found 2026-08-14).
+    def _reward_term_snapshot(name):
+        term = getattr(env_cfg.rewards, name, None)
+        if term is None:
+            return None
+        snap = {"weight": term.weight}
+        for key, value in (term.params or {}).items():
+            if isinstance(value, (int, float, str, bool)):
+                snap[key] = value
+        return snap
+
+    collection_metadata["reward_terms"] = {
+        name: snap
+        for name in (
+            "reaching_object", "lifting_object", "object_goal_tracking",
+            "object_goal_tracking_fine_grained", "action_rate", "joint_vel",
+        )
+        if (snap := _reward_term_snapshot(name)) is not None
+    }
+    collection_metadata["decimation"] = env_cfg.decimation
+    collection_metadata["sim_dt"] = env_cfg.sim.dt
+
     agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(task_name, args_cli)
 
     # specify directory for logging experiments
@@ -197,6 +247,9 @@ def main():
         if not os.path.exists(os.path.join(checkpoint_dir, f"env_{i}")):
             os.makedirs(os.path.join(checkpoint_dir, f"env_{i}"))
     shutil.copyfile(resume_path, os.path.join(checkpoint_dir, f"{checkpoint_location}.pt"))
+    collection_metadata["checkpoint"] = resume_path
+    with open(os.path.join(checkpoint_dir, "collection_metadata.json"), "w") as f:
+        json.dump(collection_metadata, f, indent=2)
     frame_idx =0
     total_traj = args_cli.total_traj #total trajectories to collect - throw away first trajectories
     num_envs = env_cfg.scene.num_envs
