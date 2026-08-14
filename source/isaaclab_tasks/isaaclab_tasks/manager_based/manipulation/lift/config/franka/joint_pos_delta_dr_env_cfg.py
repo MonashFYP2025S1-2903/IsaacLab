@@ -319,3 +319,221 @@ class FrankaCubeLiftDeltaDRTableFixWrenchSimpleEnvCfg_PLAY(FrankaCubeLiftDeltaDR
         self.scene.num_envs = 50
         self.scene.env_spacing = 2.5
         self.observations.policy.enable_corruption = False
+
+
+##
+# 2026-08-14: Full delta-mode DR x wrench ablation matrix (DR condition: Simple/none vs DR+TableFix/curriculum;
+# wrench condition: none/obs-only/reward-only/both), mirroring the absolute-mode Simple-base 2x4 ablation
+# (FrankaCubeLiftAbsoluteDRTableFixWrench{,ObsOnly,RewardOnly}SimpleEnvCfg) but extended to also cover the
+# DR+TableFix condition, and with mdp.action_l2 (see FrankaCubeLiftDeltaDRTableFixActionL2EnvCfg above, and
+# FYP2025S1-2903_deployment_setup_guide.md "Fix found and confirmed") included in EVERY cell -- without it
+# delta mode doesn't converge at all regardless of wrench setting (measured: job 29706858), so it's treated
+# as a required base ingredient here, not a variable being ablated -- wrench/DR are the only varying factors,
+# for a clean comparison against the existing absolute-mode results.
+##
+
+
+@configclass
+class FrankaCubeLiftDeltaDRTableFixWrenchActionL2EnvCfg(FrankaCubeLiftDeltaDRTableFixWrenchEnvCfg):
+    """DR+TableFix+Wrench(both obs+reward) + action_l2 layered on top. The existing WrenchEnvCfg (job
+    29703021) already converges well WITHOUT action_l2 -- this variant exists so every cell in the 2x4 matrix
+    shares the same action_l2 stabilizer, keeping wrench/DR as the only varying factors across the sweep.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.action_magnitude = RewardTermCfg(
+            func=mdp.action_l2, weight=-float(os.environ.get("ACTION_L2_WEIGHT", "0.01"))
+        )
+
+
+@configclass
+class FrankaCubeLiftDeltaDRTableFixWrenchActionL2EnvCfg_PLAY(FrankaCubeLiftDeltaDRTableFixWrenchActionL2EnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.num_envs = 50
+        self.scene.env_spacing = 2.5
+        self.observations.policy.enable_corruption = False
+
+
+@configclass
+class FrankaCubeLiftDeltaDRTableFixWrenchObsOnlyActionL2EnvCfg(FrankaCubeLiftDeltaDRTableFixActionL2EnvCfg):
+    """DR+TableFix+ActionL2 ablation cell: wrench OBSERVATION only, no contact-force reward term. Mirrors
+    FrankaCubeLiftAbsoluteDRTableFixWrenchObsOnlySimpleEnvCfg's obs-only/reward-only split, extended to the
+    DR+TableFix (curriculum) condition. Includes the same tiny-weight (1e-6) ee_contact_force_metric
+    diagnostic term (not a real training signal) purely so the raw contact-force magnitude is directly
+    comparable across all cells of the matrix, same convention as the absolute-mode ablation.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.observations.policy.ee_wrench = ObservationTermCfg(
+            func=mdp.ee_wrench_b, params={"asset_cfg": SceneEntityCfg("robot", body_names="panda_hand")}
+        )
+        # no ee_contact_penalty reward term added -- reward function otherwise unchanged.
+        self.rewards.ee_contact_force_metric = RewardTermCfg(
+            func=mdp.ee_contact_force_penalty,
+            weight=1e-6,
+            params={
+                "z_weight": 1.0,
+                "xy_weight": 0.2,
+                "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
+            },
+        )
+
+
+@configclass
+class FrankaCubeLiftDeltaDRTableFixWrenchObsOnlyActionL2EnvCfg_PLAY(FrankaCubeLiftDeltaDRTableFixWrenchObsOnlyActionL2EnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.num_envs = 50
+        self.scene.env_spacing = 2.5
+        self.observations.policy.enable_corruption = False
+
+
+@configclass
+class FrankaCubeLiftDeltaDRTableFixWrenchRewardOnlyActionL2EnvCfg(FrankaCubeLiftDeltaDRTableFixActionL2EnvCfg):
+    """DR+TableFix+ActionL2 ablation cell: wrench REWARD only (contact-force penalty), original (non-wrench)
+    observation unchanged -- policy can't see the wrench signal but is still penalized for high contact
+    force. Mirrors FrankaCubeLiftAbsoluteDRTableFixWrenchRewardOnlySimpleEnvCfg, extended to DR+TableFix.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.ee_contact_penalty = RewardTermCfg(
+            func=mdp.ee_contact_force_penalty,
+            weight=1e-5,
+            params={
+                "z_weight": 1.0,
+                "xy_weight": 0.2,
+                "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
+            },
+        )
+        # no ee_wrench observation term added -- original observation unchanged.
+        self.rewards.ee_contact_force_metric = RewardTermCfg(
+            func=mdp.ee_contact_force_penalty,
+            weight=1e-6,
+            params={
+                "z_weight": 1.0,
+                "xy_weight": 0.2,
+                "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
+            },
+        )
+
+
+@configclass
+class FrankaCubeLiftDeltaDRTableFixWrenchRewardOnlyActionL2EnvCfg_PLAY(FrankaCubeLiftDeltaDRTableFixWrenchRewardOnlyActionL2EnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.num_envs = 50
+        self.scene.env_spacing = 2.5
+        self.observations.policy.enable_corruption = False
+
+
+@configclass
+class FrankaCubeLiftDeltaDRTableFixSimpleActionL2EnvCfg(FrankaCubeLiftDeltaDRTableFixSimpleEnvCfg):
+    """Simple (no DR) + TableFix + action_l2, no wrench. Untested whether Simple mode needs action_l2 at all
+    (less exploration pressure than the DR condition might mean less windup) -- included uniformly so DR is
+    the only varying factor between this and FrankaCubeLiftDeltaDRTableFixActionL2EnvCfg.
+    """
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.action_magnitude = RewardTermCfg(
+            func=mdp.action_l2, weight=-float(os.environ.get("ACTION_L2_WEIGHT", "0.01"))
+        )
+
+
+@configclass
+class FrankaCubeLiftDeltaDRTableFixSimpleActionL2EnvCfg_PLAY(FrankaCubeLiftDeltaDRTableFixSimpleActionL2EnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.num_envs = 50
+        self.scene.env_spacing = 2.5
+        self.observations.policy.enable_corruption = False
+
+
+@configclass
+class FrankaCubeLiftDeltaDRTableFixWrenchSimpleActionL2EnvCfg(FrankaCubeLiftDeltaDRTableFixWrenchSimpleEnvCfg):
+    """Simple + wrench (both obs+reward) + action_l2."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.action_magnitude = RewardTermCfg(
+            func=mdp.action_l2, weight=-float(os.environ.get("ACTION_L2_WEIGHT", "0.01"))
+        )
+
+
+@configclass
+class FrankaCubeLiftDeltaDRTableFixWrenchSimpleActionL2EnvCfg_PLAY(FrankaCubeLiftDeltaDRTableFixWrenchSimpleActionL2EnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.num_envs = 50
+        self.scene.env_spacing = 2.5
+        self.observations.policy.enable_corruption = False
+
+
+@configclass
+class FrankaCubeLiftDeltaDRTableFixWrenchObsOnlySimpleActionL2EnvCfg(FrankaCubeLiftDeltaDRTableFixSimpleActionL2EnvCfg):
+    """Simple + action_l2 ablation cell: wrench OBSERVATION only. Mirrors
+    FrankaCubeLiftAbsoluteDRTableFixWrenchObsOnlySimpleEnvCfg."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.observations.policy.ee_wrench = ObservationTermCfg(
+            func=mdp.ee_wrench_b, params={"asset_cfg": SceneEntityCfg("robot", body_names="panda_hand")}
+        )
+        self.rewards.ee_contact_force_metric = RewardTermCfg(
+            func=mdp.ee_contact_force_penalty,
+            weight=1e-6,
+            params={
+                "z_weight": 1.0,
+                "xy_weight": 0.2,
+                "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
+            },
+        )
+
+
+@configclass
+class FrankaCubeLiftDeltaDRTableFixWrenchObsOnlySimpleActionL2EnvCfg_PLAY(FrankaCubeLiftDeltaDRTableFixWrenchObsOnlySimpleActionL2EnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.num_envs = 50
+        self.scene.env_spacing = 2.5
+        self.observations.policy.enable_corruption = False
+
+
+@configclass
+class FrankaCubeLiftDeltaDRTableFixWrenchRewardOnlySimpleActionL2EnvCfg(FrankaCubeLiftDeltaDRTableFixSimpleActionL2EnvCfg):
+    """Simple + action_l2 ablation cell: wrench REWARD only. Mirrors
+    FrankaCubeLiftAbsoluteDRTableFixWrenchRewardOnlySimpleEnvCfg."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.ee_contact_penalty = RewardTermCfg(
+            func=mdp.ee_contact_force_penalty,
+            weight=1e-5,
+            params={
+                "z_weight": 1.0,
+                "xy_weight": 0.2,
+                "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
+            },
+        )
+        self.rewards.ee_contact_force_metric = RewardTermCfg(
+            func=mdp.ee_contact_force_penalty,
+            weight=1e-6,
+            params={
+                "z_weight": 1.0,
+                "xy_weight": 0.2,
+                "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
+            },
+        )
+
+
+@configclass
+class FrankaCubeLiftDeltaDRTableFixWrenchRewardOnlySimpleActionL2EnvCfg_PLAY(FrankaCubeLiftDeltaDRTableFixWrenchRewardOnlySimpleActionL2EnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.num_envs = 50
+        self.scene.env_spacing = 2.5
+        self.observations.policy.enable_corruption = False
