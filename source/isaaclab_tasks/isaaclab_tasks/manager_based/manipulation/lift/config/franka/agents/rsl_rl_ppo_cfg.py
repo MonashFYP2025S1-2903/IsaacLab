@@ -36,6 +36,23 @@ class LearnedRewardSettings:
     the learned reward scale needs to be matched to the env reward magnitude.
     """
 
+    rm_checkpoints: str = ""
+    """Optional comma-separated list of reward-model checkpoint paths for ensemble mode
+    (added 2026-08-24 to combat reward-model overoptimization -- see
+    FYP2025S1-2903_deployment_setup_guide.md 2026-08-18 entry). When non-empty, overrides
+    ``rm_checkpoint`` and loads all listed checkpoints; the effective reward becomes
+    ``mean(predictions) - ensemble_penalty * std(predictions)`` across the ensemble, so a
+    policy can only earn high reward where the models agree, not by exploiting one model's
+    individual blind spot. Leave empty (default) for the original single-model behaviour,
+    unchanged from before this field existed.
+    """
+
+    ensemble_penalty: float = 1.0
+    """Weight on the cross-model standard deviation subtracted from the ensemble mean
+    (only used when ``rm_checkpoints`` is set). 0.0 = plain mean (no disagreement penalty);
+    higher values are more conservative/pessimistic about disagreement.
+    """
+
 
 @configclass
 class LiftCubePPORunnerCfg(RslRlOnPolicyRunnerCfg):
