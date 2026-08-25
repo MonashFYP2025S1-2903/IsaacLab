@@ -62,6 +62,24 @@ parser.add_argument(
 )
 parser.add_argument("--out_dir", type=str, required=True, help="Root directory to write collected trajectories to.")
 parser.add_argument(
+    "--random_policy",
+    action="store_true",
+    default=False,
+    help="Collect with i.i.d. uniform random actions instead of a trained checkpoint -- no "
+    "--checkpoint needed. Added 2026-08-25 to give the reward model exposure to jerky/violent "
+    "motion (uniformly sampled actions produce high action-rate variance by construction), "
+    "since every checkpoint-sourced collection so far only ever showed it smooth, converging-"
+    "toward-good behaviour -- the reward net has no calibrated opinion on what jerky motion "
+    "looks like, which the PPO-against-learned-reward exploit repeatedly found and exploited.",
+)
+parser.add_argument(
+    "--random_policy_tag", type=str, default="",
+    help="Unique tag for this --random_policy run's output subfolder (e.g. $SLURM_JOB_ID), so "
+    "multiple parallel random-policy collection jobs don't overwrite each other's env_i/traj_NNN "
+    "files -- unlike checkpoint-sourced collections, random rollouts have no natural per-run "
+    "uniqueness source. Required when --random_policy is set.",
+)
+parser.add_argument(
     "--total_traj",
     type=int,
     default=52,
@@ -195,18 +213,22 @@ def main():
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)
     log_root_path = os.path.abspath(log_root_path)
-    print(f"[INFO] Loading experiment from directory: {log_root_path}")
-    if args_cli.use_pretrained_checkpoint:
-        resume_path = get_published_pretrained_checkpoint("rsl_rl", task_name)
-        if not resume_path:
-            print("[INFO] Unfortunately a pre-trained checkpoint is currently unavailable for this task.")
-            return
-    elif args_cli.checkpoint:
-        resume_path = retrieve_file_path(args_cli.checkpoint)
+    if args_cli.random_policy:
+        resume_path = None
+        log_dir = None
     else:
-        resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
+        print(f"[INFO] Loading experiment from directory: {log_root_path}")
+        if args_cli.use_pretrained_checkpoint:
+            resume_path = get_published_pretrained_checkpoint("rsl_rl", task_name)
+            if not resume_path:
+                print("[INFO] Unfortunately a pre-trained checkpoint is currently unavailable for this task.")
+                return
+        elif args_cli.checkpoint:
+            resume_path = retrieve_file_path(args_cli.checkpoint)
+        else:
+            resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
 
-    log_dir = os.path.dirname(resume_path)
+        log_dir = os.path.dirname(resume_path)
 
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
@@ -218,7 +240,7 @@ def main():
     # wrap for video recording
     if args_cli.video:
         video_kwargs = {
-            "video_folder": os.path.join(log_dir, "videos", "play"),
+            "video_folder": os.path.join(log_dir or args_cli.out_dir, "videos", "play"),
             "step_trigger": lambda step: step == 0,
             "video_length": args_cli.video_length,
             "disable_logger": True,
@@ -230,29 +252,40 @@ def main():
     # wrap around environment for rsl-rl
     env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
 
-    print(f"[INFO]: Loading model checkpoint from: {resume_path}")
-    # load previously trained model
-    ppo_runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
-    ppo_runner.load(resume_path)
+    if args_cli.random_policy:
+        # i.i.d. uniform random actions in [-1, 1] -- matches the normalized action-space bounds
+        # PPO's own policy output is clipped to (RslRlVecEnvWrapper(..., clip_actions=...) above),
+        # so this samples from the same range a trained policy could ever produce, just without any
+        # temporal correlation/smoothness -- exactly the jerky-motion coverage gap being targeted.
+        action_shape = env.unwrapped.action_space.shape
+        action_device = env.unwrapped.device
+        def policy(obs):
+            return torch.rand(action_shape, device=action_device) * 2 - 1
+        print("[INFO]: Using i.i.d. uniform random actions (--random_policy), no checkpoint loaded.")
+    else:
+        print(f"[INFO]: Loading model checkpoint from: {resume_path}")
+        # load previously trained model
+        ppo_runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+        ppo_runner.load(resume_path)
 
-    # obtain the trained policy for inference
-    policy = ppo_runner.get_inference_policy(device=env.unwrapped.device)
+        # obtain the trained policy for inference
+        policy = ppo_runner.get_inference_policy(device=env.unwrapped.device)
 
-    # extract the neural network module
-    # we do this in a try-except to maintain backwards compatibility.
-    try:
-        # version 2.3 onwards
-        policy_nn = ppo_runner.alg.policy
-    except AttributeError:
-        # version 2.2 and below
-        policy_nn = ppo_runner.alg.actor_critic
+        # extract the neural network module
+        # we do this in a try-except to maintain backwards compatibility.
+        try:
+            # version 2.3 onwards
+            policy_nn = ppo_runner.alg.policy
+        except AttributeError:
+            # version 2.2 and below
+            policy_nn = ppo_runner.alg.actor_critic
 
-    # export policy to onnx/jit
-    export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
-    export_policy_as_jit(policy_nn, ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.pt")
-    export_policy_as_onnx(
-        policy_nn, normalizer=ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.onnx"
-    )
+        # export policy to onnx/jit
+        export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
+        export_policy_as_jit(policy_nn, ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.pt")
+        export_policy_as_onnx(
+            policy_nn, normalizer=ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.onnx"
+        )
 
     dt = env.unwrapped.step_dt
 
@@ -260,18 +293,27 @@ def main():
     data_dir = args_cli.out_dir
 
     #make checkpoint directory
-    checkpoint_location = resume_path[resume_path.rfind('/') + 1:]
-    checkpoint_location = checkpoint_location.split('.')[0]
-    log_location = log_dir[log_dir.rfind('/') + 1:]
-    checkpoint_dir = os.path.join(data_dir, f"{log_location}_{checkpoint_location}")
+    if args_cli.random_policy:
+        if not args_cli.random_policy_tag:
+            raise ValueError("--random_policy_tag is required when --random_policy is set, so "
+                              "parallel random-policy collection jobs don't overwrite each other.")
+        checkpoint_dir = os.path.join(data_dir, f"random_policy_{args_cli.random_policy_tag}")
+    else:
+        checkpoint_location = resume_path[resume_path.rfind('/') + 1:]
+        checkpoint_location = checkpoint_location.split('.')[0]
+        log_location = log_dir[log_dir.rfind('/') + 1:]
+        checkpoint_dir = os.path.join(data_dir, f"{log_location}_{checkpoint_location}")
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
     #env directories
     for i in range(env_cfg.scene.num_envs):
         if not os.path.exists(os.path.join(checkpoint_dir, f"env_{i}")):
             os.makedirs(os.path.join(checkpoint_dir, f"env_{i}"))
-    shutil.copyfile(resume_path, os.path.join(checkpoint_dir, f"{checkpoint_location}.pt"))
-    collection_metadata["checkpoint"] = resume_path
+    if args_cli.random_policy:
+        collection_metadata["checkpoint"] = "random_policy (no trained checkpoint -- i.i.d. uniform random actions)"
+    else:
+        shutil.copyfile(resume_path, os.path.join(checkpoint_dir, f"{checkpoint_location}.pt"))
+        collection_metadata["checkpoint"] = resume_path
     with open(os.path.join(checkpoint_dir, "collection_metadata.json"), "w") as f:
         json.dump(collection_metadata, f, indent=2)
     frame_idx =0
