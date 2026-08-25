@@ -53,6 +53,20 @@ class LearnedRewardSettings:
     higher values are more conservative/pessimistic about disagreement.
     """
 
+    kl_penalty_weight: float = 0.0
+    """Weight on a PPO-side KL(policy || reference) penalty, added 2026-08-25 (see
+    FYP2025S1-2903_deployment_setup_guide.md 2026-08-24/25 entry). Handled in
+    on_policy_runner.py, which loads a full second (frozen) policy network from
+    ``kl_reference_checkpoint`` -- not just a reward net -- so this directly bounds how far
+    the policy is allowed to drift from a known-good reference, instead of relying on the
+    reward model alone to police that. 0.0 = off (default, original behaviour).
+    """
+
+    kl_reference_checkpoint: str = ""
+    """Frozen reference policy .pt checkpoint (e.g. a GT-oracle's final checkpoint) that PPO
+    is penalized for drifting away from. Required when ``kl_penalty_weight`` > 0.
+    """
+
 
 @configclass
 class LiftCubePPORunnerCfg(RslRlOnPolicyRunnerCfg):
