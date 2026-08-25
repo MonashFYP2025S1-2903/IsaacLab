@@ -141,6 +141,30 @@ def main():
         pr = env_cfg.events.reset_object_position.params["pose_range"]
         collection_metadata["cube_spawn_range"] = {"x": list(pr["x"]), "y": list(pr["y"])}
 
+    # Force any reward-WEIGHT curricula (e.g. action_rate/joint_vel modify_reward_weight, which ramps
+    # -1e-4 -> -1e-1 after common_step_counter > 10000, i.e. ~83% of a 2500-iteration training run) to
+    # their fully-ramped target weight before snapshotting, for the exact same reason as the
+    # widen_cube_range handling above: a freshly-created collection env's common_step_counter starts at
+    # 0 regardless of which checkpoint is loaded, so env_cfg.rewards.<term>.weight is always the
+    # pre-curriculum startup value, never the mature one the checkpoint was actually shaped by for most
+    # of training. Using the startup weight to reconstruct GT-based preference labels for ALL
+    # checkpoints under-penalizes jerky/high-action-rate motion by 1000x -- traced 2026-08-25 as the
+    # likely cause of the violent-motion reward-hacking exploit seen across every learned-reward PPO
+    # run. Generic over any CurrTerm using mdp.modify_reward_weight, not hardcoded to these two names.
+    for curr_name in vars(env_cfg.curriculum).keys():
+        if curr_name.startswith("_"):
+            continue
+        curr_term = getattr(env_cfg.curriculum, curr_name, None)
+        if curr_term is None or curr_term.func.__name__ != "modify_reward_weight":
+            continue
+        target_term_name = curr_term.params["term_name"]
+        target_weight = curr_term.params["weight"]
+        reward_term = getattr(env_cfg.rewards, target_term_name)
+        old_weight = reward_term.weight
+        reward_term.weight = target_weight
+        print(f"[INFO] Forced reward term '{target_term_name}' to curriculum's fully-ramped weight: "
+              f"{old_weight} -> {target_weight}")
+
     # Snapshot the actual reward-term parameters this env is using, so downstream reward reconstruction
     # (pref_learning/get_trajectories.py's calculate_reward) can read the real values instead of hardcoding
     # its own copy that can silently drift out of sync with the task -- exactly how the TABLE_RAISE
