@@ -67,6 +67,25 @@ class LearnedRewardSettings:
     is penalized for drifting away from. Required when ``kl_penalty_weight`` > 0.
     """
 
+    collect_traj_dir: str = ""
+    """Added 2026-08-26. Output dir for in-training preference-learning trajectory collection
+    (see ``rsl_rl/runners/traj_collector.py``) -- empty = disabled, zero behaviour change.
+    Collects the same privileged ``preflog`` data ``play_collect_pref_data.py`` collects, live
+    during training, for a small set of envs during selected iteration windows, instead of a
+    separate post-hoc checkpoint-replay pass.
+    """
+
+    collect_traj_env_ids: str = "0,1,2,3,4,5,6,7"
+    """Comma-separated env indices to collect trajectories from."""
+
+    collect_traj_iterations: str = ""
+    """Comma-separated iteration numbers; each opens a fresh ``collect_traj_window``-iteration
+    collection window for the selected envs. Empty = no windows ever open.
+    """
+
+    collect_traj_window: int = 25
+    """Iterations a collection window stays open once triggered."""
+
 
 @configclass
 class LiftCubePPORunnerCfg(RslRlOnPolicyRunnerCfg):
