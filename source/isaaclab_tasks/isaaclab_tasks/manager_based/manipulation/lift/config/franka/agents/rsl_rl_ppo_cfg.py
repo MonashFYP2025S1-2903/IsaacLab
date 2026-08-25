@@ -67,6 +67,12 @@ class LearnedRewardSettings:
     is penalized for drifting away from. Required when ``kl_penalty_weight`` > 0.
     """
 
+    kl_anneal_to_iter: int = 0
+    """Added 2026-08-26. If > 0, linearly decay the effective KL weight from
+    ``kl_penalty_weight`` (iteration 0) to 0.0 (this iteration and beyond), instead of holding
+    it constant for the whole run. 0 = off (default, original constant-weight behaviour).
+    """
+
     collect_traj_dir: str = ""
     """Added 2026-08-26. Output dir for in-training preference-learning trajectory collection
     (see ``rsl_rl/runners/traj_collector.py``) -- empty = disabled, zero behaviour change.
