@@ -92,10 +92,12 @@ class LearnedRewardSettings:
     collect_traj_window: int = 25
     """Iterations a collection window stays open once triggered."""
 
-    online_update_interval: int = 0
-    """Added 2026-08-26. 0 = disabled (default, no behaviour change). If > 0, every time a
-    ``traj_collector`` window closes, the just-collected data is ingested into a growing online
-    pool, fresh comparisons are resampled from that pool, and the reward net is fine-tuned in
+    online_update_interval: int = -1
+    """Added 2026-08-26, default changed to -1 same day (0 read ambiguously as "update every
+    iteration" rather than "disabled"). -1 (or any value <= 0) = disabled, default, no behaviour
+    change. If > 0, every time a ``traj_collector`` window closes, the just-collected data is
+    ingested into a growing online pool, fresh comparisons are resampled from that pool, and the
+    reward net is fine-tuned in
     place -- genuine iterative preference learning across the whole run (see
     ``rsl_rl/runners/online_reward_update.py``), instead of training the reward model once,
     offline, before a single fresh PPO run. For continuous coverage, set
