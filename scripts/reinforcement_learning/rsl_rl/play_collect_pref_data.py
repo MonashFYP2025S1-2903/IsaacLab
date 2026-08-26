@@ -156,8 +156,14 @@ def main():
         collection_metadata["cube_spawn_range"] = {"x": list(x_end), "y": list(y_end)}
         print(f"[INFO] Forced cube-spawn range to curriculum's fully-ramped end state: x={x_end}, y={y_end}")
     else:
-        pr = env_cfg.events.reset_object_position.params["pose_range"]
-        collection_metadata["cube_spawn_range"] = {"x": list(pr["x"]), "y": list(pr["y"])}
+        # Object-spawn-range bookkeeping only -- tasks with no object to randomize (e.g. Cartpole,
+        # added 2026-08-27) have no reset_object_position event at all. getattr-guarded so this
+        # stays a no-op for such tasks instead of crashing; zero behavior change for Lift, the only
+        # task with this event, which still hits the same code path as before.
+        reset_object_event = getattr(env_cfg.events, "reset_object_position", None)
+        if reset_object_event is not None:
+            pr = reset_object_event.params["pose_range"]
+            collection_metadata["cube_spawn_range"] = {"x": list(pr["x"]), "y": list(pr["y"])}
 
     # Force any reward-WEIGHT curricula (e.g. action_rate/joint_vel modify_reward_weight, which ramps
     # -1e-4 -> -1e-1 after common_step_counter > 10000, i.e. ~83% of a 2500-iteration training run) to
@@ -169,7 +175,10 @@ def main():
     # checkpoints under-penalizes jerky/high-action-rate motion by 1000x -- traced 2026-08-25 as the
     # likely cause of the violent-motion reward-hacking exploit seen across every learned-reward PPO
     # run. Generic over any CurrTerm using mdp.modify_reward_weight, not hardcoded to these two names.
-    for curr_name in vars(env_cfg.curriculum).keys():
+    # env_cfg.curriculum is None for tasks with no curriculum at all (e.g. Cartpole, added
+    # 2026-08-27) -- guarded so this is a no-op there instead of crashing; zero behavior change
+    # for Lift, which always has a non-None curriculum config.
+    for curr_name in (vars(env_cfg.curriculum).keys() if env_cfg.curriculum is not None else []):
         if curr_name.startswith("_"):
             continue
         curr_term = getattr(env_cfg.curriculum, curr_name, None)
@@ -189,7 +198,7 @@ def main():
     # is_lifted-threshold bug happened (found 2026-08-14).
     def _reward_term_snapshot(name):
         term = getattr(env_cfg.rewards, name, None)
-        if term is None:
+        if term is None or not hasattr(term, "weight"):
             return None
         snap = {"weight": term.weight}
         for key, value in (term.params or {}).items():
@@ -197,13 +206,14 @@ def main():
                 snap[key] = value
         return snap
 
+    # Term names read dynamically from env_cfg.rewards itself (not a hardcoded Lift-specific
+    # list) so this works for any task's reward-term set -- added 2026-08-27 alongside Cartpole,
+    # the first non-Lift task through this script. Zero behavior change for Lift: its rewards
+    # config only ever had these six fields, so the resulting dict is identical either way.
     collection_metadata["reward_terms"] = {
         name: snap
-        for name in (
-            "reaching_object", "lifting_object", "object_goal_tracking",
-            "object_goal_tracking_fine_grained", "action_rate", "joint_vel",
-        )
-        if (snap := _reward_term_snapshot(name)) is not None
+        for name in vars(env_cfg.rewards).keys()
+        if not name.startswith("_") and (snap := _reward_term_snapshot(name)) is not None
     }
     collection_metadata["decimation"] = env_cfg.decimation
     collection_metadata["sim_dt"] = env_cfg.sim.dt
@@ -374,7 +384,15 @@ def main():
         sensor3 = env.unwrapped.scene["camera"]
     else:
         sensor = sensor1 = sensor2 = sensor3 = None
-    asset = env.unwrapped.scene["object"]
+    # `asset`/`robot` are fetched but never actually read anywhere below (confirmed) -- kept only
+    # for parity with the rest of the setup block. Guarded so tasks with no free "object" entity
+    # (e.g. Cartpole, added 2026-08-27) don't crash here; zero behavior change for Lift, which
+    # always has one. InteractiveScene has no public "does this key exist" check, hence try/except
+    # rather than a membership test.
+    try:
+        asset = env.unwrapped.scene["object"]
+    except KeyError:
+        asset = None
     robot = env.unwrapped.scene["robot"]
     dummy_obs = ['observations' for _ in range(env_cfg.scene.num_envs)]
     # reset environment
