@@ -92,6 +92,41 @@ class LearnedRewardSettings:
     collect_traj_window: int = 25
     """Iterations a collection window stays open once triggered."""
 
+    online_update_interval: int = 0
+    """Added 2026-08-26. 0 = disabled (default, no behaviour change). If > 0, every time a
+    ``traj_collector`` window closes, the just-collected data is ingested into a growing online
+    pool, fresh comparisons are resampled from that pool, and the reward net is fine-tuned in
+    place -- genuine iterative preference learning across the whole run (see
+    ``rsl_rl/runners/online_reward_update.py``), instead of training the reward model once,
+    offline, before a single fresh PPO run. For continuous coverage, set
+    ``collect_traj_iterations`` to every multiple of this value up to the run length and
+    ``collect_traj_window`` equal to it, so windows tile the run with no gaps. Requires
+    ``collect_traj_dir``. Not supported together with an ensemble (``rm_checkpoints`` set).
+    """
+
+    online_finetune_epochs: int = 8
+    """Fixed epoch count per online round (no early stopping)."""
+
+    online_comparisons_per_round: int = 3000
+    """Comparisons freshly resampled from the accumulated online pool every round."""
+
+    online_lr: float = 3e-4
+    """Learning rate for the online fine-tuning optimizer."""
+
+    online_val_frac: float = 0.15
+    """Trajectory-level split of the online pool for round-local monitoring only."""
+
+    online_camera_config: str = "ground_truth"
+    """Passed to ``load_from_meta_dataset`` for online windows; irrelevant for
+    ``obs_mode=privileged``.
+    """
+
+    online_fixed_val_meta: str = ""
+    """Optional path to the original offline ``test_meta.json``. If set, accuracy against this
+    fixed set is tracked every online round, independent of the shifting online pool, so
+    catastrophic forgetting from repeated fine-tuning is visible directly. Empty = skip.
+    """
+
 
 @configclass
 class LiftCubePPORunnerCfg(RslRlOnPolicyRunnerCfg):
