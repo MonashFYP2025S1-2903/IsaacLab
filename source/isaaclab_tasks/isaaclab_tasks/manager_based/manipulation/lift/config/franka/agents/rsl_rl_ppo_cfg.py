@@ -73,6 +73,14 @@ class LearnedRewardSettings:
     it constant for the whole run. 0 = off (default, original constant-weight behaviour).
     """
 
+    kl_reference_refresh_interval: int = -1
+    """Added 2026-08-26. -1 (or any value <= 0) = disabled (default) -- reference_policy stays
+    frozen at ``kl_reference_checkpoint`` for the whole run. If > 0, every this-many iterations the
+    reference policy's weights are overwritten with the CURRENT training policy's weights -- a
+    moving trust-region anchor instead of a permanently fixed one, letting the policy drift
+    further from its original starting point over training. Requires ``kl_penalty_weight`` > 0.
+    """
+
     collect_traj_dir: str = ""
     """Added 2026-08-26. Output dir for in-training preference-learning trajectory collection
     (see ``rsl_rl/runners/traj_collector.py``) -- empty = disabled, zero behaviour change.
@@ -108,6 +116,16 @@ class LearnedRewardSettings:
 
     online_finetune_epochs: int = 8
     """Fixed epoch count per online round (no early stopping)."""
+
+    online_retrain_mode: str = "finetune"
+    """Added 2026-08-26. "finetune" (default) continues the current reward-net weights every
+    round. "scratch" reinitializes and trains a fresh net from random init on the full
+    accumulated pool every round instead, isolating whether fine-tuning-induced path-dependence
+    is itself a confound. Uses ``online_scratch_epochs``, not ``online_finetune_epochs``.
+    """
+
+    online_scratch_epochs: int = 40
+    """Only used when ``online_retrain_mode="scratch"``."""
 
     online_comparisons_per_round: int = 3000
     """Comparisons freshly resampled from the accumulated online pool every round."""
