@@ -38,16 +38,26 @@ _EE_ASSET_CFG = SceneEntityCfg("robot", body_names=["panda_hand"])
 
 def log_ee_pos_w(env, asset_cfg: SceneEntityCfg = _EE_ASSET_CFG) -> torch.Tensor:
     """End-effector (panda_hand) position in world frame -- same source
-    position_command_error() itself reads (asset.data.body_pos_w)."""
+    position_command_error() itself reads (asset.data.body_pos_w).
+
+    Resolves the body index via find_bodies() rather than asset_cfg.body_ids: reward-term
+    SceneEntityCfg params get body_names -> body_ids resolved automatically by the reward
+    manager's own setup, but observation terms do not get the same automatic resolution --
+    asset_cfg.body_ids stays the unresolved default slice(None, None, None), found 2026-08-27
+    via a live TypeError ('slice' object is not subscriptable).
+    """
     asset: RigidObject = env.scene[asset_cfg.name]
-    return asset.data.body_pos_w[:, asset_cfg.body_ids[0]]
+    body_id = asset.find_bodies(asset_cfg.body_names)[0][0]
+    return asset.data.body_pos_w[:, body_id]
 
 
 def log_ee_quat_w(env, asset_cfg: SceneEntityCfg = _EE_ASSET_CFG) -> torch.Tensor:
     """End-effector (panda_hand) orientation in world frame -- same source
-    orientation_command_error() itself reads (asset.data.body_quat_w)."""
+    orientation_command_error() itself reads (asset.data.body_quat_w). See log_ee_pos_w's
+    docstring for why body_id is resolved via find_bodies() rather than asset_cfg.body_ids."""
     asset: RigidObject = env.scene[asset_cfg.name]
-    return asset.data.body_quat_w[:, asset_cfg.body_ids[0]]
+    body_id = asset.find_bodies(asset_cfg.body_names)[0][0]
+    return asset.data.body_quat_w[:, body_id]
 
 
 def log_command_target_pos_w(env, command_name: str, asset_cfg: SceneEntityCfg = _EE_ASSET_CFG) -> torch.Tensor:
