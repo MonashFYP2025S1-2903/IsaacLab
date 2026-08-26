@@ -147,6 +147,20 @@ class LearnedRewardSettings:
     catastrophic forgetting from repeated fine-tuning is visible directly. Empty = skip.
     """
 
+    online_offline_replay_meta: str = ""
+    """Added 2026-08-26. Optional path to the original offline ``train_meta.json`` (not the test
+    set above). If set, a fixed sample is loaded once and folded into the "old" side of every
+    round's mixed comparisons, so training stays exposed to the original pretraining distribution
+    instead of only this run's own online history. Most important for
+    ``online_retrain_mode="scratch"``, which has no residual pretrained weights otherwise. Empty
+    (default) = disabled.
+    """
+
+    online_offline_replay_max_trajectories: int = 300
+    """Caps the replay sample size -- the full offline train pool is far more than needed per
+    round and would dominate comparison generation cost every round.
+    """
+
 
 @configclass
 class LiftCubePPORunnerCfg(RslRlOnPolicyRunnerCfg):
