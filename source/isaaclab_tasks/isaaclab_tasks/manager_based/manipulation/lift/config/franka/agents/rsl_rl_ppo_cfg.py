@@ -181,6 +181,16 @@ class LearnedRewardSettings:
     instead of the live `reward_manager` value. Default False: no behaviour change.
     """
 
+    live_action_penalty_cap: float = 0.0
+    """Added 2026-08-29. Mirrors ``LearnedRewardCfg.live_action_penalty_cap`` -- a ground-truth,
+    unexploitable action-magnitude safety term added to the learned reward at inference time.
+    Default 0.0: disabled, no behaviour change.
+    """
+
+    live_action_penalty_weight: float = -0.005
+    """Added 2026-08-29. Mirrors ``LearnedRewardCfg.live_action_penalty_weight``.
+    """
+
 
 @configclass
 class LiftCubePPORunnerCfg(RslRlOnPolicyRunnerCfg):
