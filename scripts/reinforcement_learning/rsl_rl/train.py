@@ -28,6 +28,22 @@ parser.add_argument("--max_iterations", type=int, default=None, help="RL Policy 
 parser.add_argument(
     "--distributed", action="store_true", default=False, help="Run training with multiple GPUs or nodes."
 )
+parser.add_argument(
+    "--no_termination",
+    action="store_true",
+    default=False,
+    help="Disable this task's early-termination condition and replace it with a continuous "
+    "in-range penalty before training, matching Christiano et al. 2017's own MuJoCo "
+    "environment treatment (rl_teacher/envs.py's NeverDone wrapper) -- mutates env_cfg in "
+    "place via pref_learning/env_cfg_utils.py's apply_no_termination(), operating on this "
+    "SAME task's own live config (no separate gym-registered task involved), same flag added "
+    "to play_collect_pref_data.py 2026-08-28. Requires --task_family.",
+)
+parser.add_argument(
+    "--task_family", type=str, default="",
+    help="Required when --no_termination is set -- selects which entry of "
+    "env_cfg_utils.NO_TERMINATION_CONFIGS to apply (e.g. 'ant', 'cartpole').",
+)
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -74,6 +90,10 @@ import os
 import torch
 from datetime import datetime
 
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
+sys.path.insert(0, os.path.join(_REPO_ROOT, 'pref_learning'))
+from env_cfg_utils import apply_no_termination
+
 from rsl_rl.runners import OnPolicyRunner
 
 from isaaclab.envs import (
@@ -103,6 +123,13 @@ torch.backends.cudnn.benchmark = False
 @hydra_task_config(args_cli.task, "rsl_rl_cfg_entry_point")
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: RslRlOnPolicyRunnerCfg):
     """Train with RSL-RL agent."""
+    if args_cli.no_termination:
+        if not args_cli.task_family:
+            raise ValueError("--no_termination requires --task_family (e.g. 'ant', 'cartpole').")
+        env_cfg = apply_no_termination(env_cfg, args_cli.task_family)
+        print(f"[no_termination] Disabled early termination for task_family='{args_cli.task_family}', "
+              f"replaced with a continuous penalty (see env_cfg_utils.NO_TERMINATION_CONFIGS).")
+
     # override configurations with non-hydra CLI arguments
     agent_cfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
     env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs

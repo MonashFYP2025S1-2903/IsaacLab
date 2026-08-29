@@ -161,6 +161,18 @@ class LearnedRewardSettings:
     round and would dominate comparison generation cost every round.
     """
 
+    task_family: str = "lift"
+    """Added 2026-08-29. Forwarded to ``load_from_meta_dataset()`` for both
+    ``online_fixed_val_meta`` and ``online_offline_replay_meta`` -- without this, both calls
+    silently defaulted to "lift"'s own field layout (``object_position``/``ee_position``/
+    ``goal_position``), which crashes on any other task_family's trajectory archives (found
+    running the online mechanism on Ant for the first time). Default "lift" reproduces every
+    prior (pre-2026-08-29) online-PL result exactly. Mirrors the same field added to
+    ``LearnedRewardCfg`` in ``rsl_rl/runners/learned_reward.py`` -- this class is the
+    Hydra/configclass-facing duplicate consumed at CLI-override time, that one is the runtime
+    dataclass; both need the field for ``agent.learned_reward.task_family=...`` overrides to work.
+    """
+
 
 @configclass
 class LiftCubePPORunnerCfg(RslRlOnPolicyRunnerCfg):

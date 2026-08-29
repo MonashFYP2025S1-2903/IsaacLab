@@ -86,6 +86,22 @@ parser.add_argument(
     help="Total trajectories to collect across all envs combined (the first trajectory per env is "
     "discarded as warm-up, matching the original play_oneil.py behaviour).",
 )
+parser.add_argument(
+    "--no_termination",
+    action="store_true",
+    default=False,
+    help="Disable this task's early-termination condition and replace it with a continuous "
+    "in-range penalty before collecting, matching Christiano et al. 2017's own MuJoCo "
+    "environment treatment (rl_teacher/envs.py's NeverDone wrapper) -- mutates env_cfg in "
+    "place via pref_learning/env_cfg_utils.py's apply_no_termination(), operating on this "
+    "SAME task's own live config (no separate gym-registered task involved). Added "
+    "2026-08-28. Requires --task_family to be one of env_cfg_utils.NO_TERMINATION_CONFIGS.",
+)
+parser.add_argument(
+    "--task_family", type=str, default="",
+    help="Required when --no_termination is set -- selects which entry of "
+    "env_cfg_utils.NO_TERMINATION_CONFIGS to apply (e.g. 'ant', 'cartpole').",
+)
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -109,7 +125,9 @@ import torch
 import sys
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
 sys.path.insert(0, os.path.join(_REPO_ROOT, 'rsl_rl', 'rsl_rl'))
+sys.path.insert(0, os.path.join(_REPO_ROOT, 'pref_learning'))
 from runners.on_policy_runner import OnPolicyRunner
+from env_cfg_utils import apply_no_termination
 import shutil
 import omni.usd
 from pxr import Sdf, Usd, UsdGeom
@@ -135,6 +153,13 @@ def main():
     env_cfg = parse_env_cfg(
         args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
     )
+
+    if args_cli.no_termination:
+        if not args_cli.task_family:
+            raise ValueError("--no_termination requires --task_family (e.g. 'ant', 'cartpole').")
+        env_cfg = apply_no_termination(env_cfg, args_cli.task_family)
+        print(f"[no_termination] Disabled early termination for task_family='{args_cli.task_family}', "
+              f"replaced with a continuous penalty (see env_cfg_utils.NO_TERMINATION_CONFIGS).")
 
     # Force the cube-spawn curriculum (if this task has one) to its fully-ramped end state for
     # collection. A freshly-created env's common_step_counter starts at 0 regardless of which policy
