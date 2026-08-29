@@ -173,6 +173,14 @@ class LearnedRewardSettings:
     dataclass; both need the field for ``agent.learned_reward.task_family=...`` overrides to work.
     """
 
+    force_bootstrap_consistent_curriculum: bool = False
+    """Added 2026-08-29. Mirrors the same field in ``LearnedRewardCfg``
+    (``rsl_rl/runners/learned_reward.py``) -- see that field's docstring for the full rationale.
+    When True, online-round reward-term snapshots for curriculum-controlled terms
+    (action_rate/joint_vel) use the same forced fully-ramped weight bootstrap collection uses,
+    instead of the live `reward_manager` value. Default False: no behaviour change.
+    """
+
 
 @configclass
 class LiftCubePPORunnerCfg(RslRlOnPolicyRunnerCfg):
