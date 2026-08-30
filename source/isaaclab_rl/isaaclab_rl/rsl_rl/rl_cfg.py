@@ -32,13 +32,20 @@ class RslRlPpoActorCriticCfg:
     noise_std_type: Literal["scalar", "log"] = "scalar"
     """The type of noise standard deviation for the policy. Default is scalar."""
 
-    std_clamp_range: tuple[float, float] | None = None
-    """Optional (min, max) clamp on the action-distribution std, applied every forward pass.
-    Default None preserves prior behavior exactly (no clamp) for reproducibility of existing
-    experiments. Added 2026-08-30 as Arm E1 of the action-bounding comparison -- in "scalar" mode
-    (this project's default) std has zero positivity guarantee (no exp()), so gradient descent can
-    push it through zero, matching the "normal expects std >= 0.0" crash. See
-    FYP2025S1-2903_deployment_setup_guide.md, 2026-08-30 cont. 9."""
+    std_clamp_min: float = -1.0
+    """Lower bound for an optional clamp on the action-distribution std, applied every forward
+    pass. Both this and std_clamp_max must be set positive (std_clamp_max > std_clamp_min) to
+    activate -- the negative sentinel default preserves prior behavior exactly (no clamp) for
+    reproducibility of existing experiments. Two plain scalars, not a tuple/Optional[list]: the
+    IsaacLab Hydra CLI override merges a list override via len(existing_value), which crashes on a
+    None-defaulted field (TypeError: object of type 'NoneType' has no len(), found 2026-08-30/31);
+    plain floats don't hit that code path. Added 2026-08-30 as Arm E1 of the action-bounding
+    comparison -- in "scalar" mode (this project's default) std has zero positivity guarantee (no
+    exp()), so gradient descent can push it through zero, matching the "normal expects
+    std >= 0.0" crash. See FYP2025S1-2903_deployment_setup_guide.md, 2026-08-30 cont. 9/12."""
+
+    std_clamp_max: float = -1.0
+    """Upper bound -- see std_clamp_min."""
 
     actor_hidden_dims: list[int] = MISSING
     """The hidden dimensions of the actor network."""
