@@ -168,8 +168,22 @@ class RslRlOnPolicyRunnerCfg:
     algorithm: RslRlPpoAlgorithmCfg | RslRlDistillationAlgorithmCfg = MISSING
     """The algorithm configuration."""
 
-    clip_actions: float | None = None
-    """The clipping value for actions. If ``None``, then no clipping is done.
+    clip_actions: float = -1.0
+    """The clipping value for actions. If <= 0 (default -1.0), then no clipping is done.
+
+    Changed from `float | None = None` (2026-08-31): IsaacLab's own Hydra CLI-override merge
+    (`isaaclab/utils/dict.py:update_class_from_dict()`) does strict runtime type-matching against
+    the CURRENT value, not the annotated type -- so a None-defaulted field can never be overridden
+    with a non-None type via CLI at all (`ValueError: Incorrect type under namespace: /clip_actions.
+    Expected: <class 'NoneType'>, Received: <class 'float'>`, found 2026-08-31 trying
+    `agent.clip_actions=3.0`). This is a genuine, pre-existing limitation, unrelated to anything
+    added this investigation -- it's why no prior job script in this whole project ever set this
+    field via CLI. A negative sentinel keeps the field's runtime type as `float` always, so CLI
+    overrides type-match and actually work. `RslRlVecEnvWrapper.__init__` normalizes both this
+    sentinel and a genuine `None` (for any caller still passing that directly) to "disabled"
+    internally, so this change is safe for every existing caller
+    (train.py/train_ppo_plpomdp.py/train_td3_plpomdp.py/train_sac_plpomdp.py/etc.) without needing
+    to touch each of them individually.
 
     .. note::
         This clipping is performed inside the :class:`RslRlVecEnvWrapper` wrapper.

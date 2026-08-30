@@ -51,7 +51,17 @@ class RslRlVecEnvWrapper(VecEnv):
             )
         # initialize the wrapper
         self.env = env
-        self.clip_actions = clip_actions
+        # Normalize clip_actions (2026-08-31): IsaacLab's own Hydra CLI-override merge rejects
+        # overriding a None-defaulted config field with a non-None type at all
+        # (ValueError: "Incorrect type under namespace: /clip_actions. Expected: <class
+        # 'NoneType'>, Received: <class 'float'>.") -- so RslRlOnPolicyRunnerCfg.clip_actions'
+        # default is being changed from None to a negative sentinel (-1.0) to make it CLI-
+        # overridable at all (see that cfg's own docstring). Every existing/future caller of this
+        # wrapper is protected here in one place rather than requiring every training script
+        # (train.py, train_ppo_plpomdp.py, train_td3_plpomdp.py, train_sac_plpomdp.py, etc.) to
+        # separately know about the sentinel -- both a genuine None and the sentinel normalize to
+        # "disabled" here; only a real positive value activates clipping.
+        self.clip_actions = clip_actions if (clip_actions is not None and clip_actions > 0) else None
 
         # store information required by wrapper
         self.num_envs = self.unwrapped.num_envs
