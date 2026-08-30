@@ -32,6 +32,14 @@ class RslRlPpoActorCriticCfg:
     noise_std_type: Literal["scalar", "log"] = "scalar"
     """The type of noise standard deviation for the policy. Default is scalar."""
 
+    std_clamp_range: tuple[float, float] | None = None
+    """Optional (min, max) clamp on the action-distribution std, applied every forward pass.
+    Default None preserves prior behavior exactly (no clamp) for reproducibility of existing
+    experiments. Added 2026-08-30 as Arm E1 of the action-bounding comparison -- in "scalar" mode
+    (this project's default) std has zero positivity guarantee (no exp()), so gradient descent can
+    push it through zero, matching the "normal expects std >= 0.0" crash. See
+    FYP2025S1-2903_deployment_setup_guide.md, 2026-08-30 cont. 9."""
+
     actor_hidden_dims: list[int] = MISSING
     """The hidden dimensions of the actor network."""
 
