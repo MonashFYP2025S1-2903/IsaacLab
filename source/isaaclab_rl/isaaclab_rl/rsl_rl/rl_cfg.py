@@ -56,11 +56,26 @@ class RslRlPpoActorCriticCfg:
     use. Motivation: if the actor's own action distribution drifts wide (the failure mode E1
     targets), the actor is feeding its own increasingly erratic last action back into its own next
     input -- a feedback loop distinct from anything R1/E1/E2 address. Only the actor's input is
-    sliced (in ActorCritic._actor_obs); the critic and the reward net's input (which reads the same
-    shared observation tensor -- see FYP2025S1-2903_deployment_setup_guide.md, 2026-08-31) are both
-    left untouched. Default False preserves exact prior behavior. Plain bool, not an
+    sliced (in ActorCritic._actor_obs); the critic has its own independent flag (see
+    strip_last_action_from_critic_obs below) and the reward net's input (which reads the same
+    shared observation tensor -- see FYP2025S1-2903_deployment_setup_guide.md, 2026-08-31) is left
+    untouched regardless. Default False preserves exact prior behavior. Plain bool, not an
     Optional/None-defaulted field, so it doesn't hit the Hydra CLI-override type-mismatch bug that
     affected clip_actions."""
+
+    strip_last_action_from_critic_obs: bool = False
+    """Arm C1 (added 2026-08-31, Lingheng: "you don't have plan to deal with the action fed into
+    critic?"): if True, the critic network never sees the trailing `mdp.last_action` block of its
+    own observation either. Independent of strip_last_action_from_actor_obs (P1) -- combine both
+    for the "remove last_action from both actor AND critic" test Lingheng asked for, since P1
+    alone leaves the critic's input untouched (confirmed via the printed Critic MLP input dim in
+    every P1 run so far) and is therefore not a complete ablation of last_action from the network.
+    Motivation distinct from P1's: tests whether the CRITIC's own value estimates are thrown off
+    by an increasingly erratic last_action input feature (e.g. extrapolating badly once the
+    reward-net exploit pushes it outside the range seen early in training), independent of the
+    target-side value-function-loss-explosion mechanism found the same day (see
+    FYP2025S1-2903_deployment_setup_guide.md cont. 16). Plain bool, same no-CLI-bug reasoning as
+    strip_last_action_from_actor_obs."""
 
     actor_hidden_dims: list[int] = MISSING
     """The hidden dimensions of the actor network."""
