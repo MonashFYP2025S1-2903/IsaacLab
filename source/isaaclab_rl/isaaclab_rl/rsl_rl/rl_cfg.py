@@ -47,6 +47,21 @@ class RslRlPpoActorCriticCfg:
     std_clamp_max: float = -1.0
     """Upper bound -- see std_clamp_min."""
 
+    strip_last_action_from_actor_obs: bool = False
+    """Arm P1 (added 2026-08-31): if True, the actor network never sees the trailing
+    `mdp.last_action` block of its own observation group (every task's PolicyCfg in this project
+    appends it as the final term). Distinct from R1/R2/R3 (which change what the FROZEN REWARD NET
+    sees) and from E1/E2 (which bound the sampled action after the fact) -- this changes what the
+    actor itself is conditioned on, on every task, independent of which reward-net variant is in
+    use. Motivation: if the actor's own action distribution drifts wide (the failure mode E1
+    targets), the actor is feeding its own increasingly erratic last action back into its own next
+    input -- a feedback loop distinct from anything R1/E1/E2 address. Only the actor's input is
+    sliced (in ActorCritic._actor_obs); the critic and the reward net's input (which reads the same
+    shared observation tensor -- see FYP2025S1-2903_deployment_setup_guide.md, 2026-08-31) are both
+    left untouched. Default False preserves exact prior behavior. Plain bool, not an
+    Optional/None-defaulted field, so it doesn't hit the Hydra CLI-override type-mismatch bug that
+    affected clip_actions."""
+
     actor_hidden_dims: list[int] = MISSING
     """The hidden dimensions of the actor network."""
 
