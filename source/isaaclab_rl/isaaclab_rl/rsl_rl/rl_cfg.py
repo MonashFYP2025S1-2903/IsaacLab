@@ -77,6 +77,21 @@ class RslRlPpoActorCriticCfg:
     FYP2025S1-2903_deployment_setup_guide.md cont. 16). Plain bool, same no-CLI-bug reasoning as
     strip_last_action_from_actor_obs."""
 
+    feed_action_saturation_delta: bool = False
+    """Arm A1 (added 2026-08-31, Lingheng's anti-windup idea: "raw and executed action... you can
+    test the delta since there is no much difference"): if True, the actor receives an EXTRA input
+    -- the delta between the raw action it sampled and the actually-executed (post-`clip_actions`)
+    action from its previous step -- concatenated onto its (possibly P1-stripped) observation.
+    Genuinely new information, not a slice of an existing field like P1/C1, so it widens the
+    actor's input by num_actions rather than narrowing it. Requires `clip_actions` to be actively
+    set (e.g. `agent.clip_actions=3.0`) for the delta to ever be nonzero -- with no clip active,
+    raw action always equals executed action by construction (see
+    RslRlVecEnvWrapper.last_action_saturation_delta). Computed in the wrapper (not appended to the
+    shared `obs`/`obs_dict["policy"]` tensor there -- that would corrupt the frozen reward net's
+    expected input shape) and handed to the policy directly by `OnPolicyRunner`'s rollout loop each
+    step. Default False preserves exact prior behavior. Plain bool, same no-CLI-bug reasoning as
+    strip_last_action_from_actor_obs."""
+
     actor_hidden_dims: list[int] = MISSING
     """The hidden dimensions of the actor network."""
 

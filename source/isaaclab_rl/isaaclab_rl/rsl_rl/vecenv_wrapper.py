@@ -91,6 +91,10 @@ class RslRlVecEnvWrapper(VecEnv):
         # modify the action space to the clip range
         self._modify_action_space()
 
+        # Arm A1 (see step()) -- zero-init so a read before the first step() (shouldn't happen in
+        # practice, but keeps the attribute always well-defined) returns a correctly-shaped no-op.
+        self.last_action_saturation_delta = torch.zeros(self.num_envs, self.num_actions, device=self.device)
+
         # reset at the start since the RSL-RL runner does not call reset
         self.env.reset()
 
@@ -180,8 +184,22 @@ class RslRlVecEnvWrapper(VecEnv):
 
     def step(self, actions: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict]:
         # clip actions
+        # Arm A1 (added 2026-08-31): expose the delta between the raw action the policy sampled
+        # and the actually-executed (post-clip) action -- Lingheng's anti-windup idea, confirmed
+        # "you can test the delta since there is no much difference" (vs. feeding both channels
+        # separately). Computed here (not appended to `obs`/`obs_dict["policy"]` -- that tensor is
+        # also fed verbatim into the frozen reward net, see FYP2025S1-2903_deployment_setup_guide.md
+        # 2026-08-31, so appending a column here would silently corrupt every R1/R2/R3 checkpoint's
+        # expected input shape). Instead exposed as a plain attribute the runner reads after each
+        # step and hands to the policy directly (see on_policy_runner.py) -- mirrors last_action's
+        # own "previous action" semantics but for a signal IsaacLab's env doesn't compute natively.
+        # Zero whenever clip_actions is disabled (raw == executed), by construction.
         if self.clip_actions is not None:
-            actions = torch.clamp(actions, -self.clip_actions, self.clip_actions)
+            clipped_actions = torch.clamp(actions, -self.clip_actions, self.clip_actions)
+            self.last_action_saturation_delta = actions - clipped_actions
+            actions = clipped_actions
+        else:
+            self.last_action_saturation_delta = torch.zeros_like(actions)
         # record step information
         obs_dict, rew, terminated, truncated, extras = self.env.step(actions)
         # compute dones for compatibility with RSL-RL
