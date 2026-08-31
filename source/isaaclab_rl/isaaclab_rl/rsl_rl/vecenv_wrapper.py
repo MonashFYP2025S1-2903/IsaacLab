@@ -202,6 +202,34 @@ class RslRlVecEnvWrapper(VecEnv):
             self.last_action_saturation_delta = torch.zeros_like(actions)
         # record step information
         obs_dict, rew, terminated, truncated, extras = self.env.step(actions)
+        # Arm A1, part 2 (added 2026-08-31): the block above only sees saturation from the OLD
+        # wrapper-level scalar clip_actions -- it has no visibility into IsaacLab's own per-joint
+        # position-target clip (Lingheng, 2026-08-31: "the simulation and the real robot are well
+        # aligned... shouldn't we use the exact number for each joint" -- see
+        # pref_learning/env_cfg_utils.py's apply_real_joint_pos_clip / --real_joint_pos_clip),
+        # which operates on the ALREADY-SCALED action (radians), inside each ActionTerm, after
+        # env.step() has already run. For every action term that has its own cfg.clip set, recover
+        # the equivalent ACTION-SPACE delta by undoing that term's own affine transform:
+        # processed_before = raw*scale+offset (recomputed -- only the post-clip processed value is
+        # stored); processed_after = the already-clipped, already-stored value; the saturation in
+        # action-space is (processed_before-processed_after)/scale (dividing back out the same
+        # scale that was multiplied in). Summed onto the scalar-clip delta above (additive: total
+        # saturation = however much EITHER mechanism altered the ultimately-applied action), and
+        # assembled per-term into a full-width tensor matching the wrapper's own action ordering
+        # (env.action_manager.active_terms / action_term_dim, same cumulative-offset convention
+        # action_manager.get_active_iterable_terms uses internally). Terms with no clip (e.g.
+        # Lift's gripper_action -- sign-only semantics, a joint-limit clip has no meaning there)
+        # contribute exactly zero, no special-casing needed.
+        action_manager = self.unwrapped.action_manager
+        per_term_deltas = []
+        for term_name, term_dim in zip(action_manager.active_terms, action_manager.action_term_dim):
+            term = action_manager.get_term(term_name)
+            if getattr(term.cfg, "clip", None) is not None:
+                processed_before = term._raw_actions * term._scale + term._offset
+                per_term_deltas.append((processed_before - term._processed_actions) / term._scale)
+            else:
+                per_term_deltas.append(torch.zeros(actions.shape[0], term_dim, device=actions.device))
+        self.last_action_saturation_delta = self.last_action_saturation_delta + torch.cat(per_term_deltas, dim=-1)
         # compute dones for compatibility with RSL-RL
         dones = (terminated | truncated).to(dtype=torch.long)
         # move extra observations to the extras dict
