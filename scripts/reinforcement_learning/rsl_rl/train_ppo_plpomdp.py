@@ -60,6 +60,15 @@ parser.add_argument("--train_on_gt_reward", action="store_true", default=False,
                      "sharper test than \"didn't crash against the learned reward's near-zero "
                      "signal\". Expect convergence toward the established GT-oracle ceiling "
                      "(~4.9-4.95 final GT reward on Cartpole) if the implementation is correct.")
+parser.add_argument("--strip_last_action_from_actor_obs", action="store_true", default=False,
+                     help="Arm P1, ported from rsl_rl (added 2026-08-31). See "
+                     "pref_learning/ppo_plpomdp.py's MLPActorCritic docstring comment for the "
+                     "full rationale -- IsaacLab's PolicyCfg obs group embeds mdp.last_action as "
+                     "its trailing field for every task, present in the SAME obs this script "
+                     "receives.")
+parser.add_argument("--strip_last_action_from_critic_obs", action="store_true", default=False,
+                     help="Arm C1, ported from rsl_rl (added 2026-08-31). Independent of "
+                     "--strip_last_action_from_actor_obs -- combine both for the P1+C1 test.")
 parser.add_argument("--epochs", type=int, required=True)
 parser.add_argument("--steps_per_epoch", type=int, default=4000, help="PL-POMDP's own default. "
                      "Only used at num_envs=1.")
@@ -133,6 +142,8 @@ def run_single_env(env, learned_reward, num_obs, num_actions, device, obs_normal
         gamma=0.99, clip_ratio=0.2, steps_per_epoch=args_cli.steps_per_epoch,
         train_pi_iters=80, train_v_iters=80, target_kl=0.01,
         pi_lr=3e-4, vf_lr=1e-3, device=device,
+        strip_last_action_from_actor_obs=args_cli.strip_last_action_from_actor_obs,
+        strip_last_action_from_critic_obs=args_cli.strip_last_action_from_critic_obs,
     )
 
     print(f"epochs={args_cli.epochs} steps_per_epoch={args_cli.steps_per_epoch} "
@@ -229,6 +240,8 @@ def run_vectorized(env, learned_reward, num_obs, num_actions, device, num_envs, 
         gamma=0.99, clip_ratio=0.2, steps_per_env=args_cli.steps_per_env,
         train_pi_iters=80, train_v_iters=80, target_kl=0.01,
         pi_lr=3e-4, vf_lr=1e-3, device=device,
+        strip_last_action_from_actor_obs=args_cli.strip_last_action_from_actor_obs,
+        strip_last_action_from_critic_obs=args_cli.strip_last_action_from_critic_obs,
     )
 
     total_steps_per_env = args_cli.epochs * args_cli.steps_per_env
