@@ -92,6 +92,23 @@ class RslRlPpoActorCriticCfg:
     step. Default False preserves exact prior behavior. Plain bool, same no-CLI-bug reasoning as
     strip_last_action_from_actor_obs."""
 
+    tanh_squash: bool = False
+    """Arm E3 (proposed 2026-08-30 cont. 9 as the rigorous member of the E1/E2/E3 action-bounding
+    comparison; implemented 2026-08-31). If True, the actor samples raw z ~ Normal(mean, std) as
+    usual but returns tanh(z) * tanh_action_scale as the actual action (and act_inference returns
+    tanh(mean) * tanh_action_scale) -- SAC-paper-appendix-C squashing, mirroring
+    sac_plpomdp.py's SquashedGaussianMLPActor. Unlike E2's post-hoc clip_actions (which creates a
+    genuine train/execution log-prob mismatch: PPO's ratio uses the RAW sampled action's log-prob
+    but the environment experiences the CLIPPED one), the action is in-bounds by construction here,
+    so get_actions_log_prob computes the exact log-prob of the action actually executed, no
+    mismatch. Default False preserves exact prior behavior. Plain bool, same no-CLI-bug reasoning
+    as strip_last_action_from_actor_obs."""
+
+    tanh_action_scale: float = 1.0
+    """Scale applied after tanh when tanh_squash is True (action bound is +-tanh_action_scale).
+    Inert when tanh_squash is False. Default 1.0; set to match this investigation's established
+    clip_actions=3.0 convention (E2/A1) for an apples-to-apples bound comparison."""
+
     actor_hidden_dims: list[int] = MISSING
     """The hidden dimensions of the actor network."""
 
