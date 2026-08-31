@@ -191,6 +191,17 @@ class LearnedRewardSettings:
     """Added 2026-08-29. Mirrors ``LearnedRewardCfg.live_action_penalty_weight``.
     """
 
+    live_action_rate_penalty_cap: float = 0.0
+    """Added 2026-09-01. Mirrors ``LearnedRewardCfg.live_action_rate_penalty_cap`` -- same
+    mechanism as live_action_penalty_cap above, but for the actual action_rate term (consecutive-
+    action-delta magnitude) instead of raw action magnitude. Default 0.0: disabled, no behaviour
+    change.
+    """
+
+    live_action_rate_penalty_weight: float = -1e-2
+    """Added 2026-09-01. Mirrors ``LearnedRewardCfg.live_action_rate_penalty_weight``.
+    """
+
 
 @configclass
 class LiftCubePPORunnerCfg(RslRlOnPolicyRunnerCfg):
