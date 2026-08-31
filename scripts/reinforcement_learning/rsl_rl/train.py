@@ -40,9 +40,24 @@ parser.add_argument(
     "to play_collect_pref_data.py 2026-08-28. Requires --task_family.",
 )
 parser.add_argument(
+    "--real_joint_pos_clip",
+    action="store_true",
+    default=False,
+    help="Set a per-joint position-target clip on the arm action term using the REAL Franka "
+    "Panda joint limits (runtime-confirmed against the published datasheet, "
+    "position/effort/velocity all match exactly -- see "
+    "FYP2025S1-2903_deployment_setup_guide.md 2026-08-31), replacing the earlier ad hoc global "
+    "scalar clip_actions (physically wrong for a 7-joint arm at different offsets within "
+    "different-width ranges) -- mutates env_cfg in place via "
+    "pref_learning/env_cfg_utils.py's apply_real_joint_pos_clip(), same mechanism/pattern as "
+    "--no_termination. Requires --task_family in {'lift', 'reach'} (Ant has no real per-joint "
+    "limit to apply -- see env_cfg_utils.py's module-level comment).",
+)
+parser.add_argument(
     "--task_family", type=str, default="",
-    help="Required when --no_termination is set -- selects which entry of "
-    "env_cfg_utils.NO_TERMINATION_CONFIGS to apply (e.g. 'ant', 'cartpole').",
+    help="Required when --no_termination or --real_joint_pos_clip is set -- selects which entry "
+    "of env_cfg_utils.NO_TERMINATION_CONFIGS / REAL_JOINT_LIMIT_CLIP_CONFIGS to apply "
+    "(e.g. 'ant', 'cartpole', 'lift', 'reach').",
 )
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
@@ -92,7 +107,7 @@ from datetime import datetime
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
 sys.path.insert(0, os.path.join(_REPO_ROOT, 'pref_learning'))
-from env_cfg_utils import apply_no_termination
+from env_cfg_utils import apply_no_termination, apply_real_joint_pos_clip
 
 from rsl_rl.runners import OnPolicyRunner
 
@@ -129,6 +144,14 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         env_cfg = apply_no_termination(env_cfg, args_cli.task_family)
         print(f"[no_termination] Disabled early termination for task_family='{args_cli.task_family}', "
               f"replaced with a continuous penalty (see env_cfg_utils.NO_TERMINATION_CONFIGS).")
+
+    if args_cli.real_joint_pos_clip:
+        if not args_cli.task_family:
+            raise ValueError("--real_joint_pos_clip requires --task_family (e.g. 'lift', 'reach').")
+        env_cfg = apply_real_joint_pos_clip(env_cfg, args_cli.task_family)
+        print(f"[real_joint_pos_clip] Set per-joint position-target clip for task_family="
+              f"'{args_cli.task_family}' using real Franka Panda joint limits (see "
+              f"env_cfg_utils.REAL_JOINT_LIMIT_CLIP_CONFIGS).")
 
     # override configurations with non-hydra CLI arguments
     agent_cfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
