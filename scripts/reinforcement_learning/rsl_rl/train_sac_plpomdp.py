@@ -55,6 +55,11 @@ parser.add_argument("--log_interval", type=int, default=1000, help="Print Mean r
 parser.add_argument("--recompute_reward_in_backup", action="store_true", default=False,
                      help="See sac_plpomdp.py's module docstring -- off by default, numerically "
                           "identical to on for this investigation's fixed-reward-checkpoint scope.")
+parser.add_argument("--strip_last_action_from_actor_obs", action="store_true", default=False,
+                     help="Arm P1, ported from rsl_rl (added 2026-08-31).")
+parser.add_argument("--strip_last_action_from_critic_obs", action="store_true", default=False,
+                     help="Arm C1, ported from rsl_rl (added 2026-08-31). Independent of "
+                     "--strip_last_action_from_actor_obs -- combine both for the P1+C1 test.")
 parser.add_argument("--seed", type=int, default=42)
 cli_args.add_rsl_rl_args(parser)  # only used here to obtain agent_cfg.clip_actions
 AppLauncher.add_app_launcher_args(parser)
@@ -118,6 +123,8 @@ def main():
         start_steps=args_cli.start_steps, update_after=args_cli.update_after,
         update_every=args_cli.update_every, batch_size=64, replay_size=int(1e6),
         recompute_reward_in_backup=args_cli.recompute_reward_in_backup, device=device,
+        strip_last_action_from_actor_obs=args_cli.strip_last_action_from_actor_obs,
+        strip_last_action_from_critic_obs=args_cli.strip_last_action_from_critic_obs,
     )
 
     if args_cli.train_on_gt_reward:
