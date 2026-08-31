@@ -58,6 +58,10 @@ parser.add_argument("--update_after", type=int, default=1000, help="PL-POMDP's o
                      "TOTAL transitions.")
 parser.add_argument("--update_every", type=int, default=50, help="PL-POMDP's own default, in "
                      "TOTAL transitions.")
+parser.add_argument("--batch_size", type=int, default=64, help="PL-POMDP's own default; FastTD3 "
+                     "(arXiv:2505.22642) ablates much larger batch sizes as a top-two contributor "
+                     "to performance at high parallelism -- kept overridable for the "
+                     "hyperparameter search.")
 parser.add_argument("--log_interval", type=int, default=1000, help="Print Mean reward/Mean GT "
                      "reward every this many TOTAL transitions.")
 parser.add_argument("--recompute_reward_in_backup", action="store_true", default=False,
@@ -125,7 +129,7 @@ def main():
         obs_space, act_space, num_envs=num_envs, hidden_sizes=(256, 256),
         gamma=0.99, polyak=0.995, pi_lr=1e-3, q_lr=1e-3,
         start_steps=args_cli.start_steps, act_noise=0.1, target_noise=0.2, noise_clip=0.5,
-        update_after=args_cli.update_after, update_every=args_cli.update_every, batch_size=64,
+        update_after=args_cli.update_after, update_every=args_cli.update_every, batch_size=args_cli.batch_size,
         replay_size=int(1e6), policy_delay=2,
         recompute_reward_in_backup=args_cli.recompute_reward_in_backup, device=device,
     )

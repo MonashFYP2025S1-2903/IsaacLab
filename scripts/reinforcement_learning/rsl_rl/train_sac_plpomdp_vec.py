@@ -56,6 +56,10 @@ parser.add_argument("--update_after", type=int, default=1000, help="PL-POMDP's o
                      "TOTAL transitions.")
 parser.add_argument("--update_every", type=int, default=50, help="PL-POMDP's own default, in "
                      "TOTAL transitions.")
+parser.add_argument("--batch_size", type=int, default=64, help="PL-POMDP's own default; FastTD3 "
+                     "(arXiv:2505.22642) ablates much larger batch sizes as a top-two contributor "
+                     "to performance at high parallelism -- kept overridable for the "
+                     "hyperparameter search.")
 parser.add_argument("--alpha", type=float, default=0.2, help="Fixed entropy-regularization "
                      "coefficient -- this version of PL-POMDP's SAC has no automatic temperature "
                      "tuning, kept faithful rather than adding it (matches sac_plpomdp.py).")
@@ -131,7 +135,7 @@ def main():
         obs_space, act_space, num_envs=num_envs, hidden_sizes=(256, 256),
         pi_lr=1e-3, q_lr=1e-3, gamma=0.99, alpha=args_cli.alpha, polyak=0.995,
         start_steps=args_cli.start_steps, update_after=args_cli.update_after,
-        update_every=args_cli.update_every, batch_size=64, replay_size=int(1e6),
+        update_every=args_cli.update_every, batch_size=args_cli.batch_size, replay_size=int(1e6),
         recompute_reward_in_backup=args_cli.recompute_reward_in_backup, device=device,
         strip_last_action_from_actor_obs=args_cli.strip_last_action_from_actor_obs,
         strip_last_action_from_critic_obs=args_cli.strip_last_action_from_critic_obs,
