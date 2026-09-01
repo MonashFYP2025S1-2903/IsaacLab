@@ -199,6 +199,23 @@ class RslRlPpoAlgorithmCfg:
     in which case RND is not used.
     """
 
+    gradient_regularization_coef: float = 0.0
+    """Gradient regularization strength (gamma), added 2026-09-01 for the FYP2025S1-2903
+    reward-hacking investigation (Ackermann, Noukhovitch, Ishida, Sugiyama 2026, arXiv:2602.18037).
+    Penalizes the squared norm of the policy-loss gradient, biasing PPO toward flatter optima the
+    paper connects to higher reward-model accuracy -- an alternative to KL-anchoring a reference
+    policy that needs no reference policy or ensemble. Default 0.0 is a hard no-op: zero behavior
+    change, zero extra compute, unless explicitly set nonzero. NOT validated in combination with
+    rnd_cfg/symmetry_cfg -- PPO.__init__ raises NotImplementedError if both are set.
+    """
+
+    gradient_regularization_eps: float = 1e-2
+    """Finite-difference step size (epsilon) for the gradient-regularization second-order term.
+    Only used when gradient_regularization_coef > 0. Not yet tuned for this codebase -- start
+    small and smoke-test before a real run; see PPO.update()'s gradient-regularization block for
+    the exact formula.
+    """
+
 
 #########################
 # Runner configurations #
