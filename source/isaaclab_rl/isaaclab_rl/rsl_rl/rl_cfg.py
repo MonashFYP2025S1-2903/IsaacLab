@@ -209,11 +209,15 @@ class RslRlPpoAlgorithmCfg:
     rnd_cfg/symmetry_cfg -- PPO.__init__ raises NotImplementedError if both are set.
     """
 
-    gradient_regularization_eps: float = 1e-2
+    gradient_regularization_eps: float = 1e-3
     """Finite-difference step size (epsilon) for the gradient-regularization second-order term.
-    Only used when gradient_regularization_coef > 0. Not yet tuned for this codebase -- start
-    small and smoke-test before a real run; see PPO.update()'s gradient-regularization block for
-    the exact formula.
+    Only used when gradient_regularization_coef > 0. Default matches the paper's own validated
+    value -- used unchanged across every one of their experiment families (RLHF, AlpacaFarm,
+    GSM8K/MATH reasoning) and confirmed in their own sensitivity sweep (Appendix D.1) not to need
+    per-task tuning, unlike gamma which they do tune per setting (their own sweeps span
+    1e-1 to 1e-3, task-dependent). Not yet tuned specifically for this codebase's manipulation
+    tasks -- still smoke-test before a real run; see PPO.update()'s gradient-regularization block
+    for the exact formula.
     """
 
 
