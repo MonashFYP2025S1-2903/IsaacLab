@@ -54,9 +54,23 @@ parser.add_argument(
     "limit to apply -- see env_cfg_utils.py's module-level comment).",
 )
 parser.add_argument(
+    "--saturate_action_rate",
+    action="store_true",
+    default=False,
+    help="Replace the task's action_rate reward term with a saturating version (tanh(k*x)/k "
+    "instead of raw squared) so its GT-reward contribution is bounded regardless of how extreme "
+    "the raw action gets -- added 2026-09-02 after a code audit found action_rate_l2 reads "
+    "env.action_manager.action/.prev_action, the RAW pre-per-term-clip action (stored before "
+    "process_actions() runs), so --real_joint_pos_clip/--clip_actions never actually bounded "
+    "this term (see FYP2025S1-2903_deployment_setup_guide.md 2026-09-02 cont. 32). Mutates "
+    "env_cfg in place via pref_learning/env_cfg_utils.py's apply_saturating_action_rate(), same "
+    "mechanism/pattern as --no_termination/--real_joint_pos_clip. Requires --task_family.",
+)
+parser.add_argument(
     "--task_family", type=str, default="",
-    help="Required when --no_termination or --real_joint_pos_clip is set -- selects which entry "
-    "of env_cfg_utils.NO_TERMINATION_CONFIGS / REAL_JOINT_LIMIT_CLIP_CONFIGS to apply "
+    help="Required when --no_termination, --real_joint_pos_clip, or --saturate_action_rate is "
+    "set -- selects which entry of env_cfg_utils.NO_TERMINATION_CONFIGS / "
+    "REAL_JOINT_LIMIT_CLIP_CONFIGS / SATURATING_ACTION_RATE_CONFIGS to apply "
     "(e.g. 'ant', 'cartpole', 'lift', 'reach').",
 )
 # append RSL-RL cli arguments
@@ -107,7 +121,7 @@ from datetime import datetime
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
 sys.path.insert(0, os.path.join(_REPO_ROOT, 'pref_learning'))
-from env_cfg_utils import apply_no_termination, apply_real_joint_pos_clip
+from env_cfg_utils import apply_no_termination, apply_real_joint_pos_clip, apply_saturating_action_rate
 
 from rsl_rl.runners import OnPolicyRunner
 
@@ -152,6 +166,14 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         print(f"[real_joint_pos_clip] Set per-joint position-target clip for task_family="
               f"'{args_cli.task_family}' using real Franka Panda joint limits (see "
               f"env_cfg_utils.REAL_JOINT_LIMIT_CLIP_CONFIGS).")
+
+    if args_cli.saturate_action_rate:
+        if not args_cli.task_family:
+            raise ValueError("--saturate_action_rate requires --task_family (e.g. 'lift').")
+        env_cfg = apply_saturating_action_rate(env_cfg, args_cli.task_family)
+        print(f"[saturate_action_rate] Replaced action_rate reward term with a saturating "
+              f"version for task_family='{args_cli.task_family}' (see "
+              f"env_cfg_utils.SATURATING_ACTION_RATE_CONFIGS).")
 
     # override configurations with non-hydra CLI arguments
     agent_cfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
