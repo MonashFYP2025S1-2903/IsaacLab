@@ -220,6 +220,22 @@ class RslRlPpoAlgorithmCfg:
     for the exact formula.
     """
 
+    sam_rho: float = 0.0
+    """SAM (Sharpness-Aware Minimization) perturbation radius, added 2026-09-02 for the
+    FYP2025S1-2903 reward-hacking investigation -- Lee & Yoon, "Flat Reward in Policy Parameter
+    Space Implies Robust RL," ICLR 2025 Oral. Literature-review pick after gradient regularization
+    (above) made things worse, including on a clean GT-oracle sanity check with no reward hacking
+    involved at all -- SAM avoids that mechanism's REINFORCE/fixed-covariance-Gaussian theoretical
+    assumptions by wrapping PPO's actual loss directly (ascend to the worst nearby point within an
+    L2 ball of this radius, then apply the gradient computed THERE to the original parameters) --
+    no curvature-formula derivation to mismatch. Default 0.0 is a hard no-op. NOT validated in
+    combination with rnd_cfg/symmetry_cfg, or with gradient_regularization_coef > 0 simultaneously
+    -- PPO.__init__ raises NotImplementedError if either is set. The paper's own published values
+    for the MuJoCo suite (Hopper-v3/Walker2d-v3/HalfCheetah-v3) are a reasonable starting point,
+    not yet tuned for this codebase's manipulation tasks -- smoke-test before a real run; see
+    PPO.update()'s SAM block for the exact mechanism.
+    """
+
 
 #########################
 # Runner configurations #
