@@ -172,6 +172,31 @@ class LearnedRewardSettings:
     round and would dominate comparison generation cost every round.
     """
 
+    online_active_selection: bool = False
+    """Added 2026-09-05, per Lingheng: "if the problem is state coverage and OOD, can't we
+    proactively request preference on those space?" Points the existing ensemble-disagreement
+    active query selection (``ensemble_query_selection.py``) at the ONLINE-collected trajectories
+    specifically, instead of resampling this round's new-vs-new/new-vs-old training comparisons
+    uniformly at random -- old-vs-old and the validation set are left untouched. See
+    ``online_reward_update._build_mixed_comparisons_active()`` for the full mechanism.
+    False (default) = disabled, reproduces every prior online-PL result exactly.
+    """
+
+    online_active_oversample_factor: float = 3.0
+    """How many extra candidates to score per selected comparison. Only used when
+    ``online_active_selection`` is True.
+    """
+
+    online_active_ensemble_members: int = 3
+    """Ensemble size for disagreement scoring. Only used when ``online_active_selection`` is True.
+    """
+
+    online_active_ensemble_epochs: int = 15
+    """Epochs per disposable ensemble member. Only used when ``online_active_selection`` is True
+    -- deliberately lower than the offline active-learning harness's default of 40 since this runs
+    inside the live PPO training loop every online-update round.
+    """
+
     task_family: str = "lift"
     """Added 2026-08-29. Forwarded to ``load_from_meta_dataset()`` for both
     ``online_fixed_val_meta`` and ``online_offline_replay_meta`` -- without this, both calls
