@@ -64,7 +64,18 @@ class LearnedRewardSettings:
 
     kl_reference_checkpoint: str = ""
     """Frozen reference policy .pt checkpoint (e.g. a GT-oracle's final checkpoint) that PPO
-    is penalized for drifting away from. Required when ``kl_penalty_weight`` > 0.
+    is penalized for drifting away from. Required when ``kl_penalty_weight`` > 0, unless
+    ``kl_self_reference`` is True instead -- exactly one of the two must be set.
+    """
+
+    kl_self_reference: bool = False
+    """Added 2026-09-05. Self-referential KL anchor -- no warm-start, no externally-trained
+    reference at all. When True (and ``kl_reference_checkpoint`` is empty), the policy trains
+    from a normal fresh random init and ``reference_policy`` is initialized as a copy of that
+    same random-init policy instead of loading an external checkpoint. Tests whether bounding
+    the PACE of drift alone (via ``kl_reference_refresh_interval`` > 0) prevents collapse,
+    independent of whether the anchor is competent in any GT-reward sense. Mutually exclusive
+    with ``kl_reference_checkpoint``. False = off (default).
     """
 
     kl_anneal_to_iter: int = 0
